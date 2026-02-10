@@ -1,0 +1,11 @@
+[package]
+name = "sz-sdk"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Rust trait definitions for the Senzing SDK"
+repository = "https://github.com/docktermj/sz-sdk-rust"
+authors = ["Michael Dockter <michael@dockter.com>"]
+
+[dependencies]
+thiserror = "2"
