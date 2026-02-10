@@ -1,0 +1,21 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "szconfig",
+    "szconfigmanager",
+    "szdiagnostic",
+    "szengine",
+    "szproduct",
+    "wraperror"
+  ],
+  "ignorePaths": [
+    ".git/*",
+    ".gitignore",
+    ".history/*",
+    "**/*.toml",
+    "Makefile",
+    "makefiles",
+    "proto/*"
+  ]
+}
