@@ -50,7 +50,7 @@ setup:
 # -----------------------------------------------------------------------------
 
 .PHONY: lint
-lint:
+lint: cspell
 	@cargo clippy -- -D warnings
 
 .PHONY: fmt

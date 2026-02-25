@@ -5,6 +5,28 @@
 
 use phf::phf_map;
 
+/// Classification of Senzing error codes into error type categories.
+///
+/// This enum is used by the generated `SZ_ERROR_TYPES` map to classify
+/// numeric error codes. Use [`crate::SzError::from_code`] to construct
+/// the appropriate error from an error code and message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SzError {
+    SzBadInputError,
+    SzConfigurationError,
+    SzDatabaseConnectionLostError,
+    SzDatabaseError,
+    SzDatabaseTransientError,
+    SzError,
+    SzLicenseError,
+    SzNotFoundError,
+    SzNotInitializedError,
+    SzReplaceConflictError,
+    SzRetryTimeoutExceededError,
+    SzUnhandledError,
+    SzUnknownDataSourceError,
+}
+
 /// Static mapping from Senzing error code to corresponding error type.
 pub static SZ_ERROR_TYPES: phf::Map<i32, SzError> = phf_map! {
     0_i32 => SzError::SzError,

@@ -13,6 +13,9 @@ mod config_manager;
 mod diagnostic;
 mod engine;
 mod error;
+#[cfg(test)]
+mod error_tests;
+pub mod errortypes;
 mod factory;
 pub mod flags;
 pub mod parameters;
@@ -22,6 +25,8 @@ pub use config::SzConfig;
 pub use config_manager::SzConfigManager;
 pub use diagnostic::SzDiagnostic;
 pub use engine::SzEngine;
-pub use error::SzError;
+pub use error::{
+    is_bad_input, is_general, is_retryable, is_sz_error, is_unrecoverable, SzError, SzErrorKind,
+};
 pub use factory::SzAbstractFactory;
 pub use product::SzProduct;

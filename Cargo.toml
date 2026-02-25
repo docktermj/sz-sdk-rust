@@ -8,4 +8,4 @@ repository = "https://github.com/docktermj/sz-sdk-rust"
 authors = ["Michael Dockter <michael@dockter.com>"]
 
 [dependencies]
-thiserror = "2"
+phf = { version = "0.11", features = ["macros"] }
