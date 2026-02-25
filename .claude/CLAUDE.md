@@ -7,8 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 sz-sdk-rust is the **trait-definition crate** (`sz-sdk`) for the Senzing SDK in Rust. It defines public interfaces (traits) for the Senzing entity resolution platform but contains no concrete implementations. Licensed under Apache 2.0.
 
 Implementations are provided by separate crates:
+
 - `sz-sdk-rust-core` — local C library FFI bindings
 - `sz-sdk-rust-grpc` — gRPC remote access
+
+sz-sdk-rust also contains reusable components that are non-implementation specific and can be used by any of the implementations.
 
 The Go SDK at `/home/senzing/senzing-garage.git/sz-sdk-go/` is the canonical reference for interface design. The C headers at `/opt/senzing/er/sdk/c/` define the underlying native API.
 
@@ -35,9 +38,12 @@ This crate defines 5 core traits plus a factory trait:
 - **`SzAbstractFactory`** (`src/factory.rs`) — Factory pattern for creating all component instances
 
 Supporting modules:
+
 - **`flags`** (`src/flags.rs`) — Bitmask constants controlling response content, matching C header `libSzEngineFlags.h` and `libSzEngineFlagGroups.h`
 - **`parameters`** (`src/parameters.rs`) — Common parameter constants (default config, logging, empty strings)
 - **`error`** (`src/error.rs`) — `SzError` enum with 16 error variants using `thiserror`
+
+`error` is a canonical implementation that can be use by implementation classes.
 
 ## Conventions
 
