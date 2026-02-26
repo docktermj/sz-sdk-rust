@@ -1,3 +1,122 @@
+//! Error types for the Senzing SDK.
+//!
+//! This module provides [`SzError`], [`SzErrorKind`], and [`SzComponent`] for
+//! constructing, classifying, and inspecting Senzing errors.  It also provides
+//! the [`SzErrorInspect`] trait for walking error chains and the
+//! [`SzResultExt`] trait for ergonomic result handling.
+//!
+//! # Creating errors with named constructors
+//!
+//! Named constructors are the most readable way to create an error with a
+//! specific kind.  Each constructor sets `kind_explicit`, so a subsequent
+//! [`with_code`](SzError::with_code) call stores the code without overriding
+//! the kind.
+//!
+//! ```
+//! use sz_sdk::{SzError, SzErrorKind, SzComponent};
+//!
+//! // Simple named constructor
+//! let err = SzError::not_found("entity 42");
+//! assert_eq!(err.kind(), SzErrorKind::NotFound);
+//! assert_eq!(err.message(), "entity 42");
+//!
+//! // Chain with builder methods for full detail
+//! let err = SzError::database_transient("deadlock detected")
+//!     .with_code(1008)
+//!     .with_component(SzComponent::Engine);
+//! assert_eq!(err.kind(), SzErrorKind::DatabaseTransient);
+//! assert_eq!(err.code(), Some(1008));
+//! assert_eq!(err.component(), Some(SzComponent::Engine));
+//! ```
+//!
+//! # Creating errors from numeric codes
+//!
+//! When you have a Senzing error code (e.g. from the C SDK), use
+//! [`SzError::new`] with [`with_code`](SzError::with_code).  The kind is
+//! derived automatically from the code.
+//!
+//! ```
+//! use sz_sdk::{SzError, SzErrorKind};
+//!
+//! let err = SzError::new("connection dropped").with_code(1006);
+//! assert_eq!(err.kind(), SzErrorKind::DatabaseConnectionLost);
+//! assert!(err.is_retryable());
+//! ```
+//!
+//! # Hierarchy-aware error classification
+//!
+//! [`SzErrorKind`] forms a tree.  The convenience predicates on [`SzError`]
+//! and the [`SzErrorKind::is`] method honor the hierarchy so you can match
+//! on parent categories.
+//!
+//! ```
+//! use sz_sdk::{SzError, SzErrorKind};
+//!
+//! let err = SzError::database_connection_lost("server unreachable");
+//!
+//! // Leaf kind
+//! assert_eq!(err.kind(), SzErrorKind::DatabaseConnectionLost);
+//!
+//! // Parent categories
+//! assert!(err.is_retryable());                           // convenience predicate
+//! assert!(err.is(SzErrorKind::Retryable));               // hierarchy-aware check
+//! assert!(err.is(SzErrorKind::SzError));                 // root matches everything
+//! assert!(!err.is(SzErrorKind::BadInput));                // wrong branch
+//! ```
+//!
+//! # Handling errors with match
+//!
+//! ```
+//! use sz_sdk::{SzError, SzErrorKind, SzResult};
+//!
+//! fn process() -> SzResult<String> {
+//!     Err(SzError::not_found("record 99"))
+//! }
+//!
+//! match process() {
+//!     Ok(value) => println!("{value}"),
+//!     Err(ref e) if e.is_retryable() => println!("retry: {e}"),
+//!     Err(ref e) if e.is_bad_input() => println!("bad input: {e}"),
+//!     Err(e) => println!("other error: {e}"),
+//! }
+//! ```
+//!
+//! # Inspecting wrapped errors with `SzErrorInspect`
+//!
+//! When an `SzError` is wrapped inside another error type (e.g. `anyhow` or a
+//! custom wrapper), [`SzErrorInspect`] walks the `.source()` chain to find it.
+//!
+//! ```
+//! use sz_sdk::{SzError, SzErrorKind, SzErrorInspect};
+//!
+//! let err: Box<dyn std::error::Error> =
+//!     Box::new(SzError::database_transient("deadlock"));
+//! assert!(err.is_sz_retryable());
+//! assert!(err.is_sz(SzErrorKind::DatabaseTransient));
+//! ```
+//!
+//! # Recovering from retryable errors with `SzResultExt`
+//!
+//! [`SzResultExt`] adds helper methods to [`SzResult<T>`] for inline retry
+//! and filter logic.
+//!
+//! ```
+//! use sz_sdk::{SzError, SzResult, SzResultExt};
+//!
+//! let result: SzResult<String> =
+//!     Err(SzError::database_transient("deadlock"));
+//!
+//! // or_retry: recover from retryable errors inline
+//! let recovered = result.or_retry(|_| Ok("recovered".into()));
+//! assert_eq!(recovered.unwrap(), "recovered");
+//!
+//! // filter_retryable: convert retryable errors to Ok(None)
+//! let result2: SzResult<String> =
+//!     Err(SzError::database_transient("deadlock"));
+//! let filtered = result2.filter_retryable();
+//! assert_eq!(filtered.unwrap(), None);
+//! ```
+
 use crate::errortypes::{SzError as SzErrorType, SZ_ERROR_TYPES};
 use std::fmt;
 
