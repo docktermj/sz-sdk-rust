@@ -110,6 +110,87 @@ fn from_code_preserves_message() {
 }
 
 // ---------------------------------------------------------------------------
+// new()
+// ---------------------------------------------------------------------------
+
+#[test]
+fn new_sets_message_and_defaults() {
+    let err = SzError::new("something broke".into());
+    assert_eq!(err.message(), "something broke");
+    assert_eq!(err.code(), None);
+    assert_eq!(err.kind(), SzErrorKind::default());
+    assert_eq!(err.kind(), SzErrorKind::SzError);
+    assert_eq!(err.component(), None);
+}
+
+#[test]
+fn new_with_empty_message() {
+    let err = SzError::new(String::new());
+    assert_eq!(err.message(), "");
+    assert_eq!(err.code(), None);
+    assert_eq!(err.kind(), SzErrorKind::SzError);
+}
+
+// ---------------------------------------------------------------------------
+// with_code()
+// ---------------------------------------------------------------------------
+
+#[test]
+fn with_code_sets_code_and_kind() {
+    let err = SzError::new("test".into()).with_code(2);
+    assert_eq!(err.code(), Some(2));
+    assert_eq!(err.kind(), SzErrorKind::BadInput);
+}
+
+#[test]
+fn with_code_unknown_defaults_to_general() {
+    let err = SzError::new("test".into()).with_code(999999);
+    assert_eq!(err.code(), Some(999999));
+    assert_eq!(err.kind(), SzErrorKind::General);
+}
+
+#[test]
+fn with_code_each_category() {
+    let cases: &[(i64, SzErrorKind)] = &[
+        (2, SzErrorKind::BadInput),
+        (14, SzErrorKind::Configuration),
+        (1000, SzErrorKind::Database),
+        (1006, SzErrorKind::DatabaseConnectionLost),
+        (1008, SzErrorKind::DatabaseTransient),
+        (999, SzErrorKind::License),
+        (33, SzErrorKind::NotFound),
+        (48, SzErrorKind::NotInitialized),
+        (7245, SzErrorKind::ReplaceConflict),
+        (10, SzErrorKind::RetryTimeoutExceeded),
+        (87, SzErrorKind::Unhandled),
+        (2207, SzErrorKind::UnknownDataSource),
+    ];
+    for &(code, expected_kind) in cases {
+        let err = SzError::new("test".into()).with_code(code);
+        assert_eq!(err.code(), Some(code), "code {code}");
+        assert_eq!(err.kind(), expected_kind, "kind for code {code}");
+    }
+}
+
+#[test]
+fn with_code_overrides_previous_code() {
+    let err = SzError::new("test".into()).with_code(2).with_code(1006);
+    assert_eq!(err.code(), Some(1006));
+    assert_eq!(err.kind(), SzErrorKind::DatabaseConnectionLost);
+}
+
+#[test]
+fn with_code_preserves_message_and_component() {
+    let err = SzError::new("my message".into())
+        .with_component(SzComponent::Engine)
+        .with_code(33);
+    assert_eq!(err.message(), "my message");
+    assert_eq!(err.component(), Some(SzComponent::Engine));
+    assert_eq!(err.code(), Some(33));
+    assert_eq!(err.kind(), SzErrorKind::NotFound);
+}
+
+// ---------------------------------------------------------------------------
 // From<SzErrorKind> for SzError
 // ---------------------------------------------------------------------------
 
