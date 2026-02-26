@@ -1,4 +1,4 @@
-use super::error::{self, SzError, SzErrorKind};
+use super::error::{self, SzComponent, SzError, SzErrorKind};
 
 // ---------------------------------------------------------------------------
 // from_code: verify each error type classification
@@ -182,6 +182,119 @@ fn clone_preserves_fields() {
     assert_eq!(cloned.code(), 2);
     assert_eq!(cloned.message(), "test");
     assert_eq!(cloned.kind(), SzErrorKind::BadInput);
+}
+
+// ---------------------------------------------------------------------------
+// SzComponent Display
+// ---------------------------------------------------------------------------
+
+#[test]
+fn component_display() {
+    assert_eq!(format!("{}", SzComponent::Config), "SzConfig");
+    assert_eq!(format!("{}", SzComponent::ConfigManager), "SzConfigManager");
+    assert_eq!(format!("{}", SzComponent::Diagnostic), "SzDiagnostic");
+    assert_eq!(format!("{}", SzComponent::Engine), "SzEngine");
+    assert_eq!(format!("{}", SzComponent::Product), "SzProduct");
+}
+
+// ---------------------------------------------------------------------------
+// with_component / component()
+// ---------------------------------------------------------------------------
+
+#[test]
+fn with_component_sets_component() {
+    let err = SzError::from_code(2, "test".into()).with_component(SzComponent::Engine);
+    assert_eq!(err.component(), Some(SzComponent::Engine));
+}
+
+#[test]
+fn component_is_none_by_default() {
+    let err = SzError::from_code(2, "test".into());
+    assert_eq!(err.component(), None);
+}
+
+#[test]
+fn component_is_none_for_from_kind() {
+    let err: SzError = SzErrorKind::BadInput.into();
+    assert_eq!(err.component(), None);
+}
+
+#[test]
+fn clone_preserves_component() {
+    let err = SzError::from_code(2, "test".into()).with_component(SzComponent::Diagnostic);
+    let cloned = err.clone();
+    assert_eq!(cloned.component(), Some(SzComponent::Diagnostic));
+}
+
+#[test]
+fn with_component_all_variants() {
+    for (component, expected) in [
+        (SzComponent::Config, "SzConfig"),
+        (SzComponent::ConfigManager, "SzConfigManager"),
+        (SzComponent::Diagnostic, "SzDiagnostic"),
+        (SzComponent::Engine, "SzEngine"),
+        (SzComponent::Product, "SzProduct"),
+    ] {
+        let err = SzError::from_code(5, "test".into()).with_component(component);
+        assert_eq!(err.component(), Some(component));
+        assert_eq!(format!("{}", component), expected);
+    }
+}
+
+#[test]
+fn free_fn_component_returns_some() {
+    let err: Box<dyn std::error::Error> =
+        Box::new(SzError::from_code(2, "test".into()).with_component(SzComponent::Engine));
+    assert_eq!(error::component(&*err), Some(SzComponent::Engine));
+}
+
+#[test]
+fn free_fn_component_returns_none_for_no_component() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(2, "test".into()));
+    assert_eq!(err.downcast_ref::<SzError>().unwrap().component(), None);
+    assert_eq!(error::component(&*err), None);
+}
+
+#[test]
+fn free_fn_component_returns_none_for_non_sz() {
+    let err: Box<dyn std::error::Error> = Box::new(std::io::Error::other("not senzing"));
+    assert_eq!(error::component(&*err), None);
+}
+
+// ---------------------------------------------------------------------------
+// component_name()
+// ---------------------------------------------------------------------------
+
+#[test]
+fn component_name_returns_name_when_set() {
+    let err = SzError::from_code(2, "test".into()).with_component(SzComponent::Engine);
+    assert_eq!(err.component_name(), "SzEngine");
+}
+
+#[test]
+fn component_name_returns_empty_when_none() {
+    let err = SzError::from_code(2, "test".into());
+    assert_eq!(err.component_name(), "");
+}
+
+#[test]
+fn component_name_all_variants() {
+    for (component, expected) in [
+        (SzComponent::Config, "SzConfig"),
+        (SzComponent::ConfigManager, "SzConfigManager"),
+        (SzComponent::Diagnostic, "SzDiagnostic"),
+        (SzComponent::Engine, "SzEngine"),
+        (SzComponent::Product, "SzProduct"),
+    ] {
+        let err = SzError::from_code(5, "test".into()).with_component(component);
+        assert_eq!(err.component_name(), expected);
+    }
+}
+
+#[test]
+fn component_name_matches_display() {
+    let err = SzError::from_code(2, "test".into()).with_component(SzComponent::Engine);
+    assert_eq!(err.component_name(), format!("{}", SzComponent::Engine));
 }
 
 // ---------------------------------------------------------------------------
@@ -561,10 +674,11 @@ fn example_error_handling_with_match_and_if_else_as_sz_error() {
         Err(err) => {
             if let Some(szerr) = error::as_sz_error(&*err) {
                 println!(
-                    "SzError kind: {}, code: {}, retryable: {}, message: {}",
+                    "SzError kind: {}, code: {}, retryable: {}, component: {}, message: {}",
                     szerr.kind(),
                     szerr.code(),
                     szerr.is_retryable(),
+                    szerr.component_name(),
                     szerr.message()
                 );
             } else {

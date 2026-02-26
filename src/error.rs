@@ -1,6 +1,39 @@
 use crate::errortypes::{SzError as SzErrorType, SZ_ERROR_TYPES};
 use std::fmt;
 
+/// Identifies which Senzing SDK component produced an error.
+///
+/// Mirrors the five core subsystems of the Senzing SDK.  Implementations
+/// set this when constructing an [`SzError`] so callers can determine
+/// *which* component failed without parsing the error message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SzComponent {
+    Config,
+    ConfigManager,
+    Diagnostic,
+    Engine,
+    Product,
+}
+
+impl SzComponent {
+    /// Returns the component name as a static string slice.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SzComponent::Config => "SzConfig",
+            SzComponent::ConfigManager => "SzConfigManager",
+            SzComponent::Diagnostic => "SzDiagnostic",
+            SzComponent::Engine => "SzEngine",
+            SzComponent::Product => "SzProduct",
+        }
+    }
+}
+
+impl fmt::Display for SzComponent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Classification of an [`SzError`] into one of 16 error categories.
 ///
 /// Mirrors the error-type taxonomy used across all Senzing SDK language
@@ -145,12 +178,14 @@ impl From<SzErrorType> for SzErrorKind {
 /// `io::ErrorKind` pattern.
 ///
 /// Each error carries a numeric Senzing error code, a human-readable message,
-/// an [`SzErrorKind`] that classifies the error, and an optional source error.
+/// an [`SzErrorKind`] that classifies the error, an optional [`SzComponent`]
+/// identifying the originating subsystem, and an optional source error.
 #[derive(Debug)]
 pub struct SzError {
     code: i32,
     message: String,
     kind: SzErrorKind,
+    component: Option<SzComponent>,
     source: Option<Box<dyn std::error::Error + Send + Sync>>,
 }
 
@@ -161,6 +196,7 @@ impl Clone for SzError {
             code: self.code,
             message: self.message.clone(),
             kind: self.kind,
+            component: self.component,
             source: None,
         }
     }
@@ -173,6 +209,7 @@ impl SzError {
             code,
             message,
             kind,
+            component: None,
             source: None,
         }
     }
@@ -191,8 +228,15 @@ impl SzError {
             code,
             message,
             kind,
+            component: None,
             source: None,
         }
+    }
+
+    /// Sets the component that produced this error and returns `self`.
+    pub fn with_component(mut self, component: SzComponent) -> Self {
+        self.component = Some(component);
+        self
     }
 
     /// Sets the source (cause) of this error and returns `self`.
@@ -214,6 +258,19 @@ impl SzError {
     /// Returns the [`SzErrorKind`] that classifies this error.
     pub fn kind(&self) -> SzErrorKind {
         self.kind
+    }
+
+    /// Returns the [`SzComponent`] that produced this error, if set.
+    pub fn component(&self) -> Option<SzComponent> {
+        self.component
+    }
+
+    /// Returns the component name as a string, or `""` if no component is set.
+    pub fn component_name(&self) -> &str {
+        match self.component {
+            Some(c) => c.as_str(),
+            None => "",
+        }
     }
 
     /// Returns `true` if this error's kind matches the given [`SzErrorKind`].
@@ -270,6 +327,7 @@ impl From<SzErrorKind> for SzError {
             code: 0,
             message: String::new(),
             kind,
+            component: None,
             source: None,
         }
     }
@@ -282,6 +340,11 @@ impl From<SzErrorKind> for SzError {
 /// so callers don't need to name the concrete type.
 pub fn as_sz_error<'a>(err: &'a (dyn std::error::Error + 'static)) -> Option<&'a SzError> {
     err.downcast_ref::<SzError>()
+}
+
+/// If the error is an [`SzError`], returns the [`SzComponent`] that produced it.
+pub fn component(err: &(dyn std::error::Error + 'static)) -> Option<SzComponent> {
+    err.downcast_ref::<SzError>().and_then(|e| e.component())
 }
 
 /// Returns `true` if the error is an `SzError` with the given [`SzErrorKind`].
@@ -299,8 +362,7 @@ pub fn is_kind(err: &(dyn std::error::Error + 'static), kind: SzErrorKind) -> bo
 ///
 /// See [`SzErrorKind::is`] for the hierarchy rules.
 pub fn is(err: &(dyn std::error::Error + 'static), kind: SzErrorKind) -> bool {
-    err.downcast_ref::<SzError>()
-        .is_some_and(|e| e.is(kind))
+    err.downcast_ref::<SzError>().is_some_and(|e| e.is(kind))
 }
 
 /// Returns `true` if the error is an `SzError`.
