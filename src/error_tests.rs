@@ -1,4 +1,4 @@
-use super::error::{self, SzComponent, SzError, SzErrorInspect, SzErrorKind};
+use super::error::{self, SzComponent, SzError, SzErrorInspect, SzErrorKind, SzResult, SzResultExt};
 use std::fmt;
 
 // ---------------------------------------------------------------------------
@@ -1475,4 +1475,117 @@ fn inspect_send_sync_dyn_error() {
         Box::new(SzError::new("test").with_code(33));
     assert!(err.is_sz_bad_input());
     assert!(!err.is_sz_retryable());
+}
+
+// ---------------------------------------------------------------------------
+// SzResult type alias
+// ---------------------------------------------------------------------------
+
+#[test]
+fn sz_result_ok_is_result() {
+    let r: SzResult<i32> = Ok(42);
+    assert_eq!(r.unwrap(), 42);
+}
+
+#[test]
+fn sz_result_err_is_result() {
+    let r: SzResult<i32> = Err(SzError::new("boom").with_code(2));
+    assert!(r.is_err());
+}
+
+// ---------------------------------------------------------------------------
+// SzResultExt
+// ---------------------------------------------------------------------------
+
+#[test]
+fn or_retry_recovers_retryable() {
+    let r: SzResult<String> = Err(SzError::new("transient").with_code(1008));
+    let recovered = r.or_retry(|_| Ok("recovered".into()));
+    assert_eq!(recovered.unwrap(), "recovered");
+}
+
+#[test]
+fn or_retry_propagates_non_retryable() {
+    let r: SzResult<String> = Err(SzError::new("bad").with_code(2));
+    let result = r.or_retry(|_| Ok("should not reach".into()));
+    assert!(result.is_err());
+    assert!(result.unwrap_err().is_bad_input());
+}
+
+#[test]
+fn or_retry_passes_through_ok() {
+    let r: SzResult<String> = Ok("hello".into());
+    let result = r.or_retry(|_| Ok("should not reach".into()));
+    assert_eq!(result.unwrap(), "hello");
+}
+
+#[test]
+fn or_retry_closure_can_fail() {
+    let r: SzResult<String> = Err(SzError::new("transient").with_code(1008));
+    let result = r.or_retry(|_| Err(SzError::new("retry also failed").with_code(999)));
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().kind(), SzErrorKind::License);
+}
+
+#[test]
+fn filter_retryable_converts_retryable_to_none() {
+    let r: SzResult<String> = Err(SzError::new("transient").with_code(1006));
+    let filtered = r.filter_retryable();
+    assert_eq!(filtered.unwrap(), None);
+}
+
+#[test]
+fn filter_retryable_propagates_non_retryable() {
+    let r: SzResult<String> = Err(SzError::new("bad").with_code(2));
+    let filtered = r.filter_retryable();
+    assert!(filtered.is_err());
+}
+
+#[test]
+fn filter_retryable_passes_through_ok() {
+    let r: SzResult<String> = Ok("data".into());
+    let filtered = r.filter_retryable();
+    assert_eq!(filtered.unwrap(), Some("data".into()));
+}
+
+#[test]
+fn is_retryable_err_true() {
+    let r: SzResult<()> = Err(SzError::new("transient").with_code(1008));
+    assert!(r.is_retryable_err());
+}
+
+#[test]
+fn is_retryable_err_false_for_non_retryable() {
+    let r: SzResult<()> = Err(SzError::new("bad").with_code(2));
+    assert!(!r.is_retryable_err());
+}
+
+#[test]
+fn is_retryable_err_false_for_ok() {
+    let r: SzResult<()> = Ok(());
+    assert!(!r.is_retryable_err());
+}
+
+#[test]
+fn is_unrecoverable_err_true() {
+    let r: SzResult<()> = Err(SzError::new("fatal").with_code(999));
+    assert!(r.is_unrecoverable_err());
+}
+
+#[test]
+fn is_unrecoverable_err_false_for_ok() {
+    let r: SzResult<()> = Ok(());
+    assert!(!r.is_unrecoverable_err());
+}
+
+#[test]
+fn is_bad_input_err_true() {
+    let r: SzResult<()> = Err(SzError::new("nope").with_code(33));
+    assert!(r.is_bad_input_err());
+}
+
+#[test]
+fn is_bad_input_err_false_for_ok() {
+    let r: SzResult<()> = Ok(());
+    assert!(!r.is_bad_input_err());
 }

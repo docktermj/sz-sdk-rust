@@ -563,3 +563,88 @@ impl SzErrorInspect for dyn std::error::Error + Send + Sync + 'static {
         find_sz_error(self)
     }
 }
+
+// ---------------------------------------------------------------------------
+// SzResult type alias
+// ---------------------------------------------------------------------------
+
+/// Result type alias for Senzing SDK operations.
+///
+/// All trait methods in this crate return `SzResult<T>` instead of
+/// `Result<T, SzError>`.
+pub type SzResult<T> = Result<T, SzError>;
+
+// ---------------------------------------------------------------------------
+// SzResultExt extension trait
+// ---------------------------------------------------------------------------
+
+/// Extension trait for [`SzResult<T>`] providing error-classification helpers.
+///
+/// These methods let you handle retryable errors inline without explicit
+/// match arms.  Bring the trait into scope with `use sz_sdk::SzResultExt;`.
+///
+/// # Examples
+///
+/// ```
+/// use sz_sdk::{SzError, SzErrorKind, SzResult, SzResultExt};
+///
+/// fn might_fail() -> SzResult<String> {
+///     Err(SzError::new("transient").with_code(1008))
+/// }
+///
+/// let result = might_fail().or_retry(|_| Ok("recovered".into()));
+/// assert_eq!(result.unwrap(), "recovered");
+/// ```
+pub trait SzResultExt<T> {
+    /// If the error is retryable, call `f`; otherwise propagate the error unchanged.
+    fn or_retry<F>(self, f: F) -> SzResult<T>
+    where
+        F: FnOnce(SzError) -> SzResult<T>;
+
+    /// Converts a retryable error into `Ok(None)`, propagates all others as `Err`.
+    ///
+    /// Useful for filtering retryable failures out of a processing loop.
+    fn filter_retryable(self) -> Result<Option<T>, SzError>;
+
+    /// Returns `true` if the result is an error and that error is retryable.
+    fn is_retryable_err(&self) -> bool;
+
+    /// Returns `true` if the result is an error and that error is unrecoverable.
+    fn is_unrecoverable_err(&self) -> bool;
+
+    /// Returns `true` if the result is an error and that error is bad input.
+    fn is_bad_input_err(&self) -> bool;
+}
+
+impl<T> SzResultExt<T> for SzResult<T> {
+    fn or_retry<F>(self, f: F) -> SzResult<T>
+    where
+        F: FnOnce(SzError) -> SzResult<T>,
+    {
+        match self {
+            Ok(v) => Ok(v),
+            Err(e) if e.is_retryable() => f(e),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn filter_retryable(self) -> Result<Option<T>, SzError> {
+        match self {
+            Ok(v) => Ok(Some(v)),
+            Err(e) if e.is_retryable() => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn is_retryable_err(&self) -> bool {
+        matches!(self, Err(e) if e.is_retryable())
+    }
+
+    fn is_unrecoverable_err(&self) -> bool {
+        matches!(self, Err(e) if e.is_unrecoverable())
+    }
+
+    fn is_bad_input_err(&self) -> bool {
+        matches!(self, Err(e) if e.is_bad_input())
+    }
+}
