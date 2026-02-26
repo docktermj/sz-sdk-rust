@@ -34,10 +34,32 @@ impl fmt::Display for SzComponent {
     }
 }
 
-/// Classification of an [`SzError`] into one of 16 error categories.
+/// Classification of an [`SzError`] into one of 17 error categories.
 ///
 /// Mirrors the error-type taxonomy used across all Senzing SDK language
 /// bindings.  Use [`SzError::kind()`] to inspect, or match directly.
+///
+/// The hierarchy is rooted at [`SzErrorKind::SzError`]:
+///
+/// ```text
+/// SzError
+/// ├── BadInput
+/// │   ├── NotFound
+/// │   └── UnknownDataSource
+/// ├── General
+/// │   ├── Configuration
+/// │   ├── ReplaceConflict
+/// │   └── Sdk
+/// ├── Retryable
+/// │   ├── DatabaseConnectionLost
+/// │   ├── DatabaseTransient
+/// │   └── RetryTimeoutExceeded
+/// └── Unrecoverable
+///     ├── Database
+///     ├── License
+///     ├── NotInitialized
+///     └── Unhandled
+/// ```
 ///
 /// Converting an `SzErrorKind` into an `SzError` produces an error with
 /// code `0` and an empty message — useful for quick construction in tests
@@ -57,6 +79,7 @@ pub enum SzErrorKind {
     Retryable,
     RetryTimeoutExceeded,
     Sdk,
+    SzError,
     Unhandled,
     UnknownDataSource,
     Unrecoverable,
@@ -105,10 +128,18 @@ impl SzErrorKind {
         )
     }
 
+    /// Returns `true` for any `SzErrorKind` variant — i.e., any Senzing error.
+    ///
+    /// `SzError` is the root of the error hierarchy, so every variant
+    /// is an `SzError`.  This always returns `true`.
+    pub fn is_sz_error(self) -> bool {
+        true
+    }
+
     /// Hierarchy-aware kind check.
     ///
     /// Returns `true` if `self` matches `kind`, honoring the error-type
-    /// hierarchy.  For the four parent categories (`BadInput`, `General`,
+    /// hierarchy.  For parent categories (`SzError`, `BadInput`, `General`,
     /// `Retryable`, `Unrecoverable`) all child kinds also match.  For
     /// leaf kinds the comparison is an exact equality check.
     ///
@@ -118,6 +149,7 @@ impl SzErrorKind {
     /// assert!(SzErrorKind::DatabaseConnectionLost.is(SzErrorKind::Retryable));
     /// assert!(SzErrorKind::Retryable.is(SzErrorKind::Retryable));
     /// assert!(!SzErrorKind::DatabaseConnectionLost.is(SzErrorKind::BadInput));
+    /// assert!(SzErrorKind::General.is(SzErrorKind::SzError));
     /// ```
     pub fn is(self, kind: SzErrorKind) -> bool {
         match kind {
@@ -125,6 +157,7 @@ impl SzErrorKind {
             SzErrorKind::General => self.is_general(),
             SzErrorKind::Retryable => self.is_retryable(),
             SzErrorKind::Unrecoverable => self.is_unrecoverable(),
+            SzErrorKind::SzError => true,
             other => self == other,
         }
     }
@@ -167,6 +200,7 @@ impl fmt::Display for SzErrorKind {
             SzErrorKind::Retryable => "retryable error",
             SzErrorKind::RetryTimeoutExceeded => "retry timeout exceeded",
             SzErrorKind::Sdk => "SDK error",
+            SzErrorKind::SzError => "SzError error",
             SzErrorKind::Unhandled => "unhandled error",
             SzErrorKind::UnknownDataSource => "unknown data source",
             SzErrorKind::Unrecoverable => "unrecoverable error",
@@ -325,6 +359,11 @@ impl SzError {
     /// Returns `true` if this is an unrecoverable error (Unrecoverable, Database, License, NotInitialized, Unhandled).
     pub fn is_unrecoverable(&self) -> bool {
         self.kind.is_unrecoverable()
+    }
+
+    /// Returns `true` — every `SzError` is a Senzing error.
+    pub fn is_sz_error(&self) -> bool {
+        self.kind.is_sz_error()
     }
 
     /// Returns the severity level for this error.

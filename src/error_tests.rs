@@ -152,6 +152,37 @@ fn kind_is_retryable() {
 }
 
 #[test]
+fn kind_is_sz_error() {
+    // Every variant is an SzError — it's the root of the hierarchy.
+    assert!(SzErrorKind::SzError.is_sz_error());
+    assert!(SzErrorKind::BadInput.is_sz_error());
+    assert!(SzErrorKind::NotFound.is_sz_error());
+    assert!(SzErrorKind::UnknownDataSource.is_sz_error());
+    assert!(SzErrorKind::General.is_sz_error());
+    assert!(SzErrorKind::Configuration.is_sz_error());
+    assert!(SzErrorKind::ReplaceConflict.is_sz_error());
+    assert!(SzErrorKind::Sdk.is_sz_error());
+    assert!(SzErrorKind::Retryable.is_sz_error());
+    assert!(SzErrorKind::DatabaseConnectionLost.is_sz_error());
+    assert!(SzErrorKind::DatabaseTransient.is_sz_error());
+    assert!(SzErrorKind::RetryTimeoutExceeded.is_sz_error());
+    assert!(SzErrorKind::Unrecoverable.is_sz_error());
+    assert!(SzErrorKind::Database.is_sz_error());
+    assert!(SzErrorKind::License.is_sz_error());
+    assert!(SzErrorKind::NotInitialized.is_sz_error());
+    assert!(SzErrorKind::Unhandled.is_sz_error());
+}
+
+#[test]
+fn kind_sz_error_is_not_in_subcategories() {
+    // SzError is the root — it does not belong to any subcategory.
+    assert!(!SzErrorKind::SzError.is_bad_input());
+    assert!(!SzErrorKind::SzError.is_general());
+    assert!(!SzErrorKind::SzError.is_retryable());
+    assert!(!SzErrorKind::SzError.is_unrecoverable());
+}
+
+#[test]
 fn kind_is_unrecoverable() {
     assert!(SzErrorKind::Unrecoverable.is_unrecoverable());
     assert!(SzErrorKind::Database.is_unrecoverable());
@@ -194,6 +225,7 @@ fn kind_severity_low() {
     assert_eq!(SzErrorKind::Retryable.severity(), "low");
     assert_eq!(SzErrorKind::RetryTimeoutExceeded.severity(), "low");
     assert_eq!(SzErrorKind::Sdk.severity(), "low");
+    assert_eq!(SzErrorKind::SzError.severity(), "low");
     assert_eq!(SzErrorKind::UnknownDataSource.severity(), "low");
 }
 
@@ -237,6 +269,7 @@ fn kind_display() {
     assert_eq!(format!("{}", SzErrorKind::BadInput), "bad input");
     assert_eq!(format!("{}", SzErrorKind::Database), "database error");
     assert_eq!(format!("{}", SzErrorKind::Sdk), "SDK error");
+    assert_eq!(format!("{}", SzErrorKind::SzError), "SzError error");
 }
 
 // ---------------------------------------------------------------------------
@@ -611,6 +644,28 @@ fn kind_is_unrecoverable_matches_children() {
 }
 
 #[test]
+fn kind_is_sz_error_matches_all() {
+    // SzError is the root — every variant matches via is().
+    assert!(SzErrorKind::SzError.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::BadInput.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::NotFound.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::UnknownDataSource.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::General.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::Configuration.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::ReplaceConflict.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::Sdk.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::Retryable.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::DatabaseConnectionLost.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::DatabaseTransient.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::RetryTimeoutExceeded.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::Unrecoverable.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::Database.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::License.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::NotInitialized.is(SzErrorKind::SzError));
+    assert!(SzErrorKind::Unhandled.is(SzErrorKind::SzError));
+}
+
+#[test]
 fn kind_is_leaf_is_exact() {
     assert!(SzErrorKind::DatabaseConnectionLost.is(SzErrorKind::DatabaseConnectionLost));
     assert!(!SzErrorKind::DatabaseTransient.is(SzErrorKind::DatabaseConnectionLost));
@@ -622,8 +677,32 @@ fn sz_error_is_hierarchy_aware() {
     let err = SzError::from_code(1006, "test".into()); // DatabaseConnectionLost
     assert!(err.is(SzErrorKind::Retryable));
     assert!(err.is(SzErrorKind::DatabaseConnectionLost));
+    assert!(err.is(SzErrorKind::SzError));
     assert!(!err.is(SzErrorKind::BadInput));
     assert!(!err.is(SzErrorKind::DatabaseTransient));
+}
+
+#[test]
+fn sz_error_is_sz_error_always_true() {
+    // Every SzError is a Senzing error regardless of kind.
+    assert!(SzError::from_code(2, "test".into()).is_sz_error()); // BadInput
+    assert!(SzError::from_code(14, "test".into()).is_sz_error()); // Configuration
+    assert!(SzError::from_code(1006, "test".into()).is_sz_error()); // DatabaseConnectionLost
+    assert!(SzError::from_code(999, "test".into()).is_sz_error()); // License
+    assert!(SzError::new(0, String::new(), SzErrorKind::SzError).is_sz_error());
+}
+
+#[test]
+fn sz_error_from_sz_error_kind() {
+    let err: SzError = SzErrorKind::SzError.into();
+    assert_eq!(err.code(), 0);
+    assert_eq!(err.message(), "");
+    assert_eq!(err.kind(), SzErrorKind::SzError);
+    assert!(err.is_sz_error());
+    assert!(!err.is_bad_input());
+    assert!(!err.is_general());
+    assert!(!err.is_retryable());
+    assert!(!err.is_unrecoverable());
 }
 
 #[test]
@@ -632,6 +711,18 @@ fn free_fn_is_hierarchy_aware() {
     assert!(error::is(&*err, SzErrorKind::Retryable));
     assert!(error::is(&*err, SzErrorKind::DatabaseConnectionLost));
     assert!(!error::is(&*err, SzErrorKind::BadInput));
+}
+
+#[test]
+fn free_fn_is_sz_error_kind_matches_all() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(1006, "test".into()));
+    assert!(error::is(&*err, SzErrorKind::SzError));
+
+    let err2: Box<dyn std::error::Error> = Box::new(SzError::from_code(2, "test".into()));
+    assert!(error::is(&*err2, SzErrorKind::SzError));
+
+    let non_sz: Box<dyn std::error::Error> = Box::new(std::io::Error::other("not senzing"));
+    assert!(!error::is(&*non_sz, SzErrorKind::SzError));
 }
 
 #[test]
@@ -1162,7 +1253,17 @@ fn inspect_is_sz_hierarchy_aware() {
     let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(1006, "test".into()));
     assert!(err.is_sz(SzErrorKind::Retryable));
     assert!(err.is_sz(SzErrorKind::DatabaseConnectionLost));
+    assert!(err.is_sz(SzErrorKind::SzError));
     assert!(!err.is_sz(SzErrorKind::BadInput));
+}
+
+#[test]
+fn inspect_is_sz_error_kind_through_chain() {
+    let sz = SzError::from_code(33, "not found".into());
+    let wrapped: Box<dyn std::error::Error> = Box::new(WrapperError(Box::new(sz)));
+    assert!(wrapped.is_sz(SzErrorKind::SzError));
+    assert!(wrapped.is_sz(SzErrorKind::BadInput));
+    assert!(!wrapped.is_sz(SzErrorKind::Retryable));
 }
 
 #[test]
