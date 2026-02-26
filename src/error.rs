@@ -427,3 +427,76 @@ pub fn is_unrecoverable(err: &(dyn std::error::Error + 'static)) -> bool {
     err.downcast_ref::<SzError>()
         .is_some_and(|e| e.is_unrecoverable())
 }
+
+// ---------------------------------------------------------------------------
+// SzErrorInspect extension trait
+// ---------------------------------------------------------------------------
+
+/// Walks the error source chain looking for an `SzError`.
+fn find_sz_error<'a>(mut err: &'a (dyn std::error::Error + 'static)) -> Option<&'a SzError> {
+    loop {
+        if let Some(sz) = err.downcast_ref::<SzError>() {
+            return Some(sz);
+        }
+        err = err.source()?;
+    }
+}
+
+/// Extension trait for inspecting any error (or error chain) for an embedded [`SzError`].
+///
+/// Walks the `.source()` chain, so it finds `SzError` even when wrapped
+/// by middleware layers like `anyhow` or custom wrapper errors.
+///
+/// Callers bring this into scope with `use sz_sdk::SzErrorInspect;`.
+pub trait SzErrorInspect {
+    /// Returns a reference to the first `SzError` in the source chain, if any.
+    fn sz_error(&self) -> Option<&SzError>;
+
+    /// Returns `true` if the chain contains a retryable `SzError`.
+    fn is_sz_retryable(&self) -> bool {
+        self.sz_error().is_some_and(|e| e.is_retryable())
+    }
+
+    /// Returns `true` if the chain contains an unrecoverable `SzError`.
+    fn is_sz_unrecoverable(&self) -> bool {
+        self.sz_error().is_some_and(|e| e.is_unrecoverable())
+    }
+
+    /// Returns `true` if the chain contains a bad-input `SzError`.
+    fn is_sz_bad_input(&self) -> bool {
+        self.sz_error().is_some_and(|e| e.is_bad_input())
+    }
+
+    /// Returns `true` if the chain contains a general `SzError`.
+    fn is_sz_general(&self) -> bool {
+        self.sz_error().is_some_and(|e| e.is_general())
+    }
+
+    /// Returns `true` if the chain contains any `SzError`.
+    fn is_sz_error(&self) -> bool {
+        self.sz_error().is_some()
+    }
+
+    /// Hierarchy-aware kind check on the first `SzError` in the chain.
+    fn is_sz(&self, kind: SzErrorKind) -> bool {
+        self.sz_error().is_some_and(|e| e.is(kind))
+    }
+}
+
+impl SzErrorInspect for dyn std::error::Error + 'static {
+    fn sz_error(&self) -> Option<&SzError> {
+        find_sz_error(self)
+    }
+}
+
+impl SzErrorInspect for dyn std::error::Error + Send + 'static {
+    fn sz_error(&self) -> Option<&SzError> {
+        find_sz_error(self)
+    }
+}
+
+impl SzErrorInspect for dyn std::error::Error + Send + Sync + 'static {
+    fn sz_error(&self) -> Option<&SzError> {
+        find_sz_error(self)
+    }
+}

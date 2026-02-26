@@ -1,4 +1,5 @@
-use super::error::{self, SzComponent, SzError, SzErrorKind};
+use super::error::{self, SzComponent, SzError, SzErrorInspect, SzErrorKind};
+use std::fmt;
 
 // ---------------------------------------------------------------------------
 // from_code: verify each error type classification
@@ -666,9 +667,70 @@ fn sz_error_implements_std_error() {
 // ---------------------------------------------------------------------------
 
 #[test]
+fn example_error_handling_with_multiple_err_match_arms_as_error_simplified() {
+    match example_customer_function() {
+        Ok(response) => println!("{}", response),
+        Err(err) if err.is_sz_error() => println!("SzError: {err}"),
+        Err(err) => println!("Non-SzError error: {err}"),
+    }
+}
+
+#[test]
+fn example_error_handling_with_multiple_err_match_arms_as_error_detailed() {
+    match example_customer_function() {
+        Ok(response) => println!("{}", response),
+        Err(err) if err.is_sz(SzErrorKind::DatabaseConnectionLost) => {
+            println!("Database connection lost — reconnecting: {err}");
+        }
+        Err(err) if err.is_sz_bad_input() => println!("Bad input: {err}"),
+        Err(err) if err.is_sz_retryable() => println!("Retryable: {err}"),
+        Err(err) if err.is_sz_unrecoverable() => println!("Unrecoverable: {err}"),
+        Err(err) if err.is_sz_general() => println!("General: {err}"),
+        Err(err) if err.is_sz_error() => println!("SzError: {err}"),
+        Err(err) => println!("Non-SzError error: {err}"),
+    }
+}
+
+#[test]
+fn example_error_handling_with_two_level_match_as_sz_error() {
+    match example_customer_function() {
+        Ok(response) => println!("{}", response),
+        Err(err) => match err.sz_error() {
+            Some(szerr) => {
+                println!(
+                    "SzError kind: {}, code: {}, retryable: {}, component: {}, severity: {}, message: {}",
+                    szerr.kind(),
+                    szerr.code(),
+                    szerr.is_retryable(),
+                    szerr.component_name(),
+                    szerr.severity(),
+                    szerr.message()
+                );
+            }
+            None => println!("Non-SzError error: {err}"),
+        },
+    }
+}
+
+#[test]
+fn example_error_handling_with_match_as_error() {
+    match example_customer_function() {
+        Ok(response) => println!("{}", response),
+        Err(err) => match () {
+            _ if err.is_sz_bad_input() => println!("Bad input: {err}"),
+            _ if err.is_sz_retryable() => println!("Retryable: {err}"),
+            _ if err.is_sz_unrecoverable() => println!("Unrecoverable: {err}"),
+            _ if err.is_sz_general() => println!("General: {err}"),
+            _ if err.is_sz_error() => println!("SzError: {err}"),
+            _ => println!("Non-SzError error: {err}"),
+        },
+    }
+}
+
+#[test]
 fn example_error_handling_with_two_level_match_as_error() {
     match example_customer_function() {
-        Ok(response) => println!(">>>> {}", response),
+        Ok(response) => println!("{}", response),
         Err(err) => match () {
             _ if error::is(&*err, SzErrorKind::DatabaseConnectionLost) => {
                 println!("Database connection lost — reconnecting: {err}");
@@ -686,7 +748,7 @@ fn example_error_handling_with_two_level_match_as_error() {
 #[test]
 fn example_error_handling_with_match_and_multiple_err_match_arms_as_error() {
     match example_customer_function() {
-        Ok(response) => println!(">>>> {}", response),
+        Ok(response) => println!("{}", response),
         Err(err) if error::is(&*err, SzErrorKind::DatabaseConnectionLost) => {
             println!("Database connection lost — reconnecting: {err}");
         }
@@ -702,7 +764,7 @@ fn example_error_handling_with_match_and_multiple_err_match_arms_as_error() {
 #[test]
 fn example_error_handling_with_match_and_multiple_err_match_arms_as_error_2() {
     match example_customer_function() {
-        Ok(response) => println!(">>>> {}", response),
+        Ok(response) => println!("{}", response),
         Err(err) if error::is(&*err, SzErrorKind::DatabaseConnectionLost) => {
             println!("Database connection lost — reconnecting: {err}");
         }
@@ -718,7 +780,7 @@ fn example_error_handling_with_match_and_multiple_err_match_arms_as_error_2() {
 #[test]
 fn example_error_handling_with_match_and_if_else_as_error() {
     match example_customer_function() {
-        Ok(response) => println!(">>>> {}", response),
+        Ok(response) => println!("{}", response),
         Err(err) => {
             if error::is_sz_error(&*err) {
                 println!(
@@ -737,7 +799,7 @@ fn example_error_handling_with_match_and_if_else_as_error() {
 #[test]
 fn example_error_handling_with_match_and_if_else_as_sz_error() {
     match example_customer_function() {
-        Ok(response) => println!(">>>> {}", response),
+        Ok(response) => println!("{}", response),
         Err(err) => {
             if let Some(szerr) = error::as_sz_error(&*err) {
                 println!(
@@ -759,7 +821,7 @@ fn example_error_handling_with_match_and_if_else_as_sz_error() {
 #[test]
 fn example_match_on_kind_as_sz_error() {
     match example_customer_function() {
-        Ok(response) => println!(">>>> {}", response),
+        Ok(response) => println!("{}", response),
         Err(err) => {
             if let Some(szerr) = error::as_sz_error(&*err) {
                 match szerr.kind() {
@@ -934,7 +996,7 @@ fn propagation_using_free_functions_2() {
 #[test]
 fn propagation_with_2_level_match_using_downcast() {
     match example_customer_function() {
-        Ok(the_string) => println!(">>>> {}", the_string),
+        Ok(the_string) => println!("{}", the_string),
         Err(err) => match err.downcast::<SzError>() {
             Ok(sz) => {
                 println!(
@@ -957,7 +1019,7 @@ fn propagation_with_2_level_match_using_downcast() {
 #[test]
 fn propagation_with_two_level_match_no_downcast() {
     match example_customer_function() {
-        Ok(the_string) => println!(">>>> {}", the_string),
+        Ok(the_string) => println!("{}", the_string),
         Err(err) => match () {
             _ if error::is_bad_input(&*err) => {
                 println!("Bad input: {err}");
@@ -1003,7 +1065,7 @@ fn propagation_with_unwrap_err_and_match() {
 // Not considered best practice, but kept as a test.
 fn propagation_with_match_and_multiple_ref_err_as_error() {
     match example_customer_function() {
-        Ok(response) => println!(">>>> {}", response),
+        Ok(response) => println!("{}", response),
         Err(ref err) if error::is_kind(&**err, SzErrorKind::DatabaseConnectionLost) => {
             println!("Database connection lost — reconnecting: {err}");
         }
@@ -1021,4 +1083,101 @@ fn verify_that_error_is_works() {
     let result = example_customer_function();
     let err = result.unwrap_err();
     assert!(err.is::<SzError>());
+}
+
+// ---------------------------------------------------------------------------
+// SzErrorInspect extension trait
+// ---------------------------------------------------------------------------
+
+/// A simple wrapper error for testing chain walking.
+#[derive(Debug)]
+struct WrapperError(Box<dyn std::error::Error + Send + Sync>);
+
+impl fmt::Display for WrapperError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "wrapper: {}", self.0)
+    }
+}
+
+impl std::error::Error for WrapperError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&*self.0)
+    }
+}
+
+#[test]
+fn inspect_sz_error_on_direct_sz_error() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(33, "not found".into()));
+    assert!(err.sz_error().is_some());
+    assert_eq!(err.sz_error().unwrap().code(), 33);
+}
+
+#[test]
+fn inspect_sz_error_returns_none_for_non_sz() {
+    let err: Box<dyn std::error::Error> = Box::new(std::io::Error::other("not senzing"));
+    assert!(err.sz_error().is_none());
+}
+
+#[test]
+fn inspect_sz_error_through_chain() {
+    let sz = SzError::from_code(1006, "connection lost".into());
+    let wrapped: Box<dyn std::error::Error> = Box::new(WrapperError(Box::new(sz)));
+    let found = wrapped.sz_error().expect("should find SzError in chain");
+    assert_eq!(found.code(), 1006);
+    assert_eq!(found.kind(), SzErrorKind::DatabaseConnectionLost);
+}
+
+#[test]
+fn inspect_is_sz_retryable_true() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(1006, "test".into()));
+    assert!(err.is_sz_retryable());
+}
+
+#[test]
+fn inspect_is_sz_retryable_false_for_non_sz() {
+    let err: Box<dyn std::error::Error> = Box::new(std::io::Error::other("not senzing"));
+    assert!(!err.is_sz_retryable());
+}
+
+#[test]
+fn inspect_is_sz_unrecoverable_true() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(999, "license".into()));
+    assert!(err.is_sz_unrecoverable());
+}
+
+#[test]
+fn inspect_is_sz_bad_input_true() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(33, "not found".into()));
+    assert!(err.is_sz_bad_input());
+}
+
+#[test]
+fn inspect_is_sz_general_true() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(14, "config".into()));
+    assert!(err.is_sz_general());
+}
+
+#[test]
+fn inspect_is_sz_hierarchy_aware() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(1006, "test".into()));
+    assert!(err.is_sz(SzErrorKind::Retryable));
+    assert!(err.is_sz(SzErrorKind::DatabaseConnectionLost));
+    assert!(!err.is_sz(SzErrorKind::BadInput));
+}
+
+#[test]
+fn inspect_chain_walking_through_wrapper() {
+    let sz = SzError::from_code(1008, "transient".into());
+    let wrapped: Box<dyn std::error::Error> = Box::new(WrapperError(Box::new(sz)));
+    assert!(wrapped.is_sz_retryable());
+    assert!(!wrapped.is_sz_bad_input());
+    assert!(wrapped.is_sz(SzErrorKind::DatabaseTransient));
+}
+
+#[test]
+fn inspect_send_sync_dyn_error() {
+    let err: Box<dyn std::error::Error + Send + Sync> =
+        Box::new(SzError::from_code(33, "test".into()));
+    assert!(err.is_sz_bad_input());
+    assert!(!err.is_sz_retryable());
 }

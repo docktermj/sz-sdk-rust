@@ -27,7 +27,7 @@ pub use diagnostic::SzDiagnostic;
 pub use engine::SzEngine;
 pub use error::{
     as_sz_error, component, is, is_bad_input, is_general, is_kind, is_retryable, is_sz_error,
-    is_unrecoverable, severity, SzComponent, SzError, SzErrorKind,
+    is_unrecoverable, severity, SzComponent, SzError, SzErrorInspect, SzErrorKind,
 };
 pub use factory::SzAbstractFactory;
 pub use product::SzProduct;
