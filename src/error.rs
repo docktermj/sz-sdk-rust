@@ -241,6 +241,7 @@ pub struct SzError {
     code: Option<i64>,
     message: String,
     kind: SzErrorKind,
+    kind_explicit: bool,
     component: Option<SzComponent>,
     source: Option<Box<dyn std::error::Error + Send + Sync>>,
 }
@@ -252,6 +253,7 @@ impl Clone for SzError {
             code: self.code,
             message: self.message.clone(),
             kind: self.kind,
+            kind_explicit: self.kind_explicit,
             component: self.component,
             source: None,
         }
@@ -260,31 +262,12 @@ impl Clone for SzError {
 
 impl SzError {
     /// Creates an `SzError` with a message and default kind.
-    pub fn new(message: String) -> Self {
+    pub fn new(message: impl Into<String>) -> Self {
         Self {
             code: None,
-            message,
+            message: message.into(),
             kind: SzErrorKind::default(),
-            component: None,
-            source: None,
-        }
-    }
-
-    /// Creates the appropriate `SzError` for a Senzing error code.
-    ///
-    /// Looks up the error code in the `SZ_ERROR_TYPES` map to determine the
-    /// [`SzErrorKind`].  Unknown codes default to [`SzErrorKind::General`].
-    pub fn from_code(code: i64, message: String) -> Self {
-        let code_i32 = i32::try_from(code).ok();
-        let kind = code_i32
-            .and_then(|c| SZ_ERROR_TYPES.get(&c))
-            .copied()
-            .map(SzErrorKind::from)
-            .unwrap_or(SzErrorKind::General);
-        Self {
-            code: Some(code),
-            message,
-            kind,
+            kind_explicit: false,
             component: None,
             source: None,
         }
@@ -295,12 +278,14 @@ impl SzError {
     /// Looks up the code in the `SZ_ERROR_TYPES` map to determine the
     /// [`SzErrorKind`].  Unknown codes default to [`SzErrorKind::General`].
     pub fn with_code(mut self, code: i64) -> Self {
-        let code_i32 = i32::try_from(code).ok();
-        self.kind = code_i32
-            .and_then(|c| SZ_ERROR_TYPES.get(&c))
-            .copied()
-            .map(SzErrorKind::from)
-            .unwrap_or(SzErrorKind::General);
+        if !self.kind_explicit {
+            let code_i32 = i32::try_from(code).ok();
+            self.kind = code_i32
+                .and_then(|c| SZ_ERROR_TYPES.get(&c))
+                .copied()
+                .map(SzErrorKind::from)
+                .unwrap_or(SzErrorKind::General);
+        }
         self.code = Some(code);
         self
     }
@@ -308,6 +293,19 @@ impl SzError {
     /// Sets the component that produced this error and returns `self`.
     pub fn with_component(mut self, component: SzComponent) -> Self {
         self.component = Some(component);
+        self
+    }
+
+    /// Sets the error kind and returns `self`.
+    pub fn with_kind(mut self, kind: SzErrorKind) -> Self {
+        self.kind = kind;
+        self.kind_explicit = true;
+        self
+    }
+
+    /// Sets the error message and returns `self`.
+    pub fn with_message(mut self, message: impl Into<String>) -> Self {
+        self.message = message.into();
         self
     }
 
@@ -414,6 +412,7 @@ impl From<SzErrorKind> for SzError {
             code: None,
             message: String::new(),
             kind,
+            kind_explicit: true,
             component: None,
             source: None,
         }

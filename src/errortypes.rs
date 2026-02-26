@@ -8,7 +8,7 @@ use phf::phf_map;
 /// Classification of Senzing error codes into error type categories.
 ///
 /// This enum is used by the generated `SZ_ERROR_TYPES` map to classify
-/// numeric error codes. Use [`crate::SzError::from_code`] to construct
+/// numeric error codes. Use `SzError::new(...).with_code(...)` to construct
 /// the appropriate error from an error code and message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SzError {
