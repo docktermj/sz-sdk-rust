@@ -119,6 +119,7 @@
 
 use crate::errortypes::{SzError as SzErrorType, SZ_ERROR_TYPES};
 use std::fmt;
+use std::sync::Arc;
 
 /// Identifies which Senzing SDK component produced an error.
 ///
@@ -363,11 +364,11 @@ pub struct SzError {
     kind: SzErrorKind,
     kind_explicit: bool,
     component: Option<SzComponent>,
-    source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    source: Option<Arc<dyn std::error::Error + Send + Sync>>,
 }
 
 impl Clone for SzError {
-    /// Clones the error, dropping the source chain (which is not cloneable).
+    /// Clones the error, preserving the source chain via shared ownership.
     fn clone(&self) -> Self {
         Self {
             code: self.code,
@@ -375,7 +376,7 @@ impl Clone for SzError {
             kind: self.kind,
             kind_explicit: self.kind_explicit,
             component: self.component,
-            source: None,
+            source: self.source.clone(),
         }
     }
 }
@@ -515,7 +516,7 @@ impl SzError {
 
     /// Sets the source (cause) of this error and returns `self`.
     pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
-        self.source = Some(Box::new(source));
+        self.source = Some(Arc::new(source));
         self
     }
 

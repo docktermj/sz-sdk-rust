@@ -614,11 +614,12 @@ fn source_is_none_by_default() {
 }
 
 #[test]
-fn clone_drops_source() {
+fn clone_preserves_source() {
     let cause = std::io::Error::other("disk full");
     let err = SzError::new("db failed").with_code(1000).with_source(cause);
     let cloned = err.clone();
-    assert!(std::error::Error::source(&cloned).is_none());
+    let source = std::error::Error::source(&cloned).expect("source should be preserved after clone");
+    assert!(source.to_string().contains("disk full"));
 }
 
 // ---------------------------------------------------------------------------
