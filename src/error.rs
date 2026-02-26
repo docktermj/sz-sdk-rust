@@ -64,7 +64,7 @@ impl fmt::Display for SzComponent {
 /// Converting an `SzErrorKind` into an `SzError` produces an error with
 /// code `0` and an empty message — useful for quick construction in tests
 /// or when only the category matters (mirrors `std::io::Error: From<ErrorKind>`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SzErrorKind {
     BadInput,
     Configuration,
@@ -79,6 +79,7 @@ pub enum SzErrorKind {
     Retryable,
     RetryTimeoutExceeded,
     Sdk,
+    #[default]
     SzError,
     Unhandled,
     UnknownDataSource,
@@ -237,7 +238,7 @@ impl From<SzErrorType> for SzErrorKind {
 /// identifying the originating subsystem, and an optional source error.
 #[derive(Debug)]
 pub struct SzError {
-    code: i32,
+    code: Option<i64>,
     message: String,
     kind: SzErrorKind,
     component: Option<SzComponent>,
@@ -258,12 +259,12 @@ impl Clone for SzError {
 }
 
 impl SzError {
-    /// Creates an `SzError` with explicit code, message, and kind.
-    pub fn new(code: i32, message: String, kind: SzErrorKind) -> Self {
+    /// Creates an `SzError` with a message and default kind.
+    pub fn new(message: String) -> Self {
         Self {
-            code,
+            code: None,
             message,
-            kind,
+            kind: SzErrorKind::default(),
             component: None,
             source: None,
         }
@@ -273,19 +274,35 @@ impl SzError {
     ///
     /// Looks up the error code in the `SZ_ERROR_TYPES` map to determine the
     /// [`SzErrorKind`].  Unknown codes default to [`SzErrorKind::General`].
-    pub fn from_code(code: i32, message: String) -> Self {
-        let kind = SZ_ERROR_TYPES
-            .get(&code)
+    pub fn from_code(code: i64, message: String) -> Self {
+        let code_i32 = i32::try_from(code).ok();
+        let kind = code_i32
+            .and_then(|c| SZ_ERROR_TYPES.get(&c))
             .copied()
             .map(SzErrorKind::from)
             .unwrap_or(SzErrorKind::General);
         Self {
-            code,
+            code: Some(code),
             message,
             kind,
             component: None,
             source: None,
         }
+    }
+
+    /// Sets the error code and corresponding kind, returning `self`.
+    ///
+    /// Looks up the code in the `SZ_ERROR_TYPES` map to determine the
+    /// [`SzErrorKind`].  Unknown codes default to [`SzErrorKind::General`].
+    pub fn with_code(mut self, code: i64) -> Self {
+        let code_i32 = i32::try_from(code).ok();
+        self.kind = code_i32
+            .and_then(|c| SZ_ERROR_TYPES.get(&c))
+            .copied()
+            .map(SzErrorKind::from)
+            .unwrap_or(SzErrorKind::General);
+        self.code = Some(code);
+        self
     }
 
     /// Sets the component that produced this error and returns `self`.
@@ -300,8 +317,8 @@ impl SzError {
         self
     }
 
-    /// Returns the numeric Senzing error code.
-    pub fn code(&self) -> i32 {
+    /// Returns the numeric Senzing error code, if set.
+    pub fn code(&self) -> Option<i64> {
         self.code
     }
 
@@ -376,7 +393,10 @@ impl SzError {
 
 impl fmt::Display for SzError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} (code {}): {}", self.kind, self.code, self.message)
+        match self.code {
+            Some(code) => write!(f, "{} (code {}): {}", self.kind, code, self.message),
+            None => write!(f, "{}: {}", self.kind, self.message),
+        }
     }
 }
 
@@ -391,7 +411,7 @@ impl std::error::Error for SzError {
 impl From<SzErrorKind> for SzError {
     fn from(kind: SzErrorKind) -> Self {
         Self {
-            code: 0,
+            code: None,
             message: String::new(),
             kind,
             component: None,

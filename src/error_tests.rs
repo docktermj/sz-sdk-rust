@@ -9,98 +9,98 @@ use std::fmt;
 fn from_code_bad_input() {
     let err = SzError::from_code(2, "test".into());
     assert_eq!(err.kind(), SzErrorKind::BadInput);
-    assert_eq!(err.code(), 2);
+    assert_eq!(err.code(), Some(2));
 }
 
 #[test]
 fn from_code_configuration() {
     let err = SzError::from_code(14, "test".into());
     assert_eq!(err.kind(), SzErrorKind::Configuration);
-    assert_eq!(err.code(), 14);
+    assert_eq!(err.code(), Some(14));
 }
 
 #[test]
 fn from_code_database() {
     let err = SzError::from_code(1000, "test".into());
     assert_eq!(err.kind(), SzErrorKind::Database);
-    assert_eq!(err.code(), 1000);
+    assert_eq!(err.code(), Some(1000));
 }
 
 #[test]
 fn from_code_database_connection_lost() {
     let err = SzError::from_code(1006, "test".into());
     assert_eq!(err.kind(), SzErrorKind::DatabaseConnectionLost);
-    assert_eq!(err.code(), 1006);
+    assert_eq!(err.code(), Some(1006));
 }
 
 #[test]
 fn from_code_database_transient() {
     let err = SzError::from_code(1008, "test".into());
     assert_eq!(err.kind(), SzErrorKind::DatabaseTransient);
-    assert_eq!(err.code(), 1008);
+    assert_eq!(err.code(), Some(1008));
 }
 
 #[test]
 fn from_code_general() {
     let err = SzError::from_code(5, "test".into());
     assert_eq!(err.kind(), SzErrorKind::General);
-    assert_eq!(err.code(), 5);
+    assert_eq!(err.code(), Some(5));
 }
 
 #[test]
 fn from_code_license() {
     let err = SzError::from_code(999, "test".into());
     assert_eq!(err.kind(), SzErrorKind::License);
-    assert_eq!(err.code(), 999);
+    assert_eq!(err.code(), Some(999));
 }
 
 #[test]
 fn from_code_not_found() {
     let err = SzError::from_code(33, "test".into());
     assert_eq!(err.kind(), SzErrorKind::NotFound);
-    assert_eq!(err.code(), 33);
+    assert_eq!(err.code(), Some(33));
 }
 
 #[test]
 fn from_code_not_initialized() {
     let err = SzError::from_code(48, "test".into());
     assert_eq!(err.kind(), SzErrorKind::NotInitialized);
-    assert_eq!(err.code(), 48);
+    assert_eq!(err.code(), Some(48));
 }
 
 #[test]
 fn from_code_replace_conflict() {
     let err = SzError::from_code(7245, "test".into());
     assert_eq!(err.kind(), SzErrorKind::ReplaceConflict);
-    assert_eq!(err.code(), 7245);
+    assert_eq!(err.code(), Some(7245));
 }
 
 #[test]
 fn from_code_retry_timeout_exceeded() {
     let err = SzError::from_code(10, "test".into());
     assert_eq!(err.kind(), SzErrorKind::RetryTimeoutExceeded);
-    assert_eq!(err.code(), 10);
+    assert_eq!(err.code(), Some(10));
 }
 
 #[test]
 fn from_code_unhandled() {
     let err = SzError::from_code(87, "test".into());
     assert_eq!(err.kind(), SzErrorKind::Unhandled);
-    assert_eq!(err.code(), 87);
+    assert_eq!(err.code(), Some(87));
 }
 
 #[test]
 fn from_code_unknown_data_source() {
     let err = SzError::from_code(2207, "test".into());
     assert_eq!(err.kind(), SzErrorKind::UnknownDataSource);
-    assert_eq!(err.code(), 2207);
+    assert_eq!(err.code(), Some(2207));
 }
 
 #[test]
 fn from_code_unknown_code_defaults_to_general() {
     let err = SzError::from_code(999999, "unknown".into());
     assert_eq!(err.kind(), SzErrorKind::General);
-    assert_eq!(err.code(), 999999);
+    assert_eq!(err.code(), Some(999999));
 }
 
 #[test]
@@ -114,9 +114,9 @@ fn from_code_preserves_message() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn from_kind_produces_code_zero() {
+fn from_kind_produces_no_code() {
     let err: SzError = SzErrorKind::BadInput.into();
-    assert_eq!(err.code(), 0);
+    assert_eq!(err.code(), None);
     assert_eq!(err.message(), "");
     assert_eq!(err.kind(), SzErrorKind::BadInput);
 }
@@ -280,7 +280,7 @@ fn kind_display() {
 fn clone_preserves_fields() {
     let err = SzError::from_code(2, "test".into());
     let cloned = err.clone();
-    assert_eq!(cloned.code(), 2);
+    assert_eq!(cloned.code(), Some(2));
     assert_eq!(cloned.message(), "test");
     assert_eq!(cloned.kind(), SzErrorKind::BadInput);
 }
@@ -689,13 +689,13 @@ fn sz_error_is_sz_error_always_true() {
     assert!(SzError::from_code(14, "test".into()).is_sz_error()); // Configuration
     assert!(SzError::from_code(1006, "test".into()).is_sz_error()); // DatabaseConnectionLost
     assert!(SzError::from_code(999, "test".into()).is_sz_error()); // License
-    assert!(SzError::new(0, String::new(), SzErrorKind::SzError).is_sz_error());
+    assert!(SzError::new(String::new()).is_sz_error());
 }
 
 #[test]
 fn sz_error_from_sz_error_kind() {
     let err: SzError = SzErrorKind::SzError.into();
-    assert_eq!(err.code(), 0);
+    assert_eq!(err.code(), None);
     assert_eq!(err.message(), "");
     assert_eq!(err.kind(), SzErrorKind::SzError);
     assert!(err.is_sz_error());
@@ -789,7 +789,7 @@ fn example_error_handling_with_two_level_match_as_sz_error() {
         Err(err) => match err.sz_error() {
             Some(szerr) => {
                 println!(
-                    "SzError kind: {}, code: {}, retryable: {}, component: {}, severity: {}, message: {}",
+                    "SzError kind: {}, code: {:?}, retryable: {}, component: {}, severity: {}, message: {}",
                     szerr.kind(),
                     szerr.code(),
                     szerr.is_retryable(),
@@ -894,7 +894,7 @@ fn example_error_handling_with_match_and_if_else_as_sz_error() {
         Err(err) => {
             if let Some(szerr) = error::as_sz_error(&*err) {
                 println!(
-                    "SzError kind: {}, code: {}, retryable: {}, component: {}, severity: {}, message: {}",
+                    "SzError kind: {}, code: {:?}, retryable: {}, component: {}, severity: {}, message: {}",
                     szerr.kind(),
                     szerr.code(),
                     szerr.is_retryable(),
@@ -917,7 +917,7 @@ fn example_match_on_kind_as_sz_error() {
             if let Some(szerr) = error::as_sz_error(&*err) {
                 match szerr.kind() {
                     SzErrorKind::NotFound | SzErrorKind::UnknownDataSource => {
-                        assert_eq!(szerr.code(), 33);
+                        assert_eq!(szerr.code(), Some(33));
                     }
                     SzErrorKind::DatabaseConnectionLost | SzErrorKind::DatabaseTransient => {
                         panic!("unexpected retryable error");
@@ -967,7 +967,7 @@ fn propagation_with_unwrap_err_and_as_sz_error() {
     if let Some(sz) = error::as_sz_error(&*err) {
         // We have full access to Senzing-specific fields.
         assert_eq!(sz.kind(), SzErrorKind::NotFound);
-        assert_eq!(sz.code(), 33);
+        assert_eq!(sz.code(), Some(33));
         assert_eq!(sz.message(), "record not found");
         assert!(sz.is_bad_input());
         assert!(sz.is_kind(SzErrorKind::NotFound));
@@ -990,7 +990,7 @@ fn propagation_with_unwrap_err_and_downcast() {
     if let Some(sz) = err.downcast_ref::<SzError>() {
         // We have full access to Senzing-specific fields.
         assert_eq!(sz.kind(), SzErrorKind::NotFound);
-        assert_eq!(sz.code(), 33);
+        assert_eq!(sz.code(), Some(33));
         assert_eq!(sz.message(), "record not found");
         assert!(sz.is_bad_input());
         assert!(sz.is_kind(SzErrorKind::NotFound));
@@ -1014,7 +1014,7 @@ fn propagation_match_on_kind() {
         match sz.kind() {
             SzErrorKind::NotFound | SzErrorKind::UnknownDataSource => {
                 // Handle "not found" style errors.
-                assert_eq!(sz.code(), 33);
+                assert_eq!(sz.code(), Some(33));
             }
             SzErrorKind::DatabaseConnectionLost | SzErrorKind::DatabaseTransient => {
                 panic!("unexpected retryable error");
@@ -1061,7 +1061,7 @@ fn propagation_using_free_functions_2() {
     match err.downcast::<SzError>() {
         Ok(sz) => {
             assert_eq!(sz.kind(), SzErrorKind::NotFound);
-            assert_eq!(sz.code(), 33);
+            assert_eq!(sz.code(), Some(33));
             assert_eq!(sz.message(), "record not found");
             assert!(sz.is_bad_input());
         }
@@ -1091,7 +1091,7 @@ fn propagation_with_2_level_match_using_downcast() {
         Err(err) => match err.downcast::<SzError>() {
             Ok(sz) => {
                 println!(
-                    "SzError [{}] (kind: {}, bad_input: {}, retryable: {}, unrecoverable: {}): {}",
+                    "SzError [{:?}] (kind: {}, bad_input: {}, retryable: {}, unrecoverable: {}): {}",
                     sz.code(),
                     sz.kind(),
                     sz.is_bad_input(),
@@ -1200,7 +1200,7 @@ impl std::error::Error for WrapperError {
 fn inspect_sz_error_on_direct_sz_error() {
     let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(33, "not found".into()));
     assert!(err.sz_error().is_some());
-    assert_eq!(err.sz_error().unwrap().code(), 33);
+    assert_eq!(err.sz_error().unwrap().code(), Some(33));
 }
 
 #[test]
@@ -1214,7 +1214,7 @@ fn inspect_sz_error_through_chain() {
     let sz = SzError::from_code(1006, "connection lost".into());
     let wrapped: Box<dyn std::error::Error> = Box::new(WrapperError(Box::new(sz)));
     let found = wrapped.sz_error().expect("should find SzError in chain");
-    assert_eq!(found.code(), 1006);
+    assert_eq!(found.code(), Some(1006));
     assert_eq!(found.kind(), SzErrorKind::DatabaseConnectionLost);
 }
 
