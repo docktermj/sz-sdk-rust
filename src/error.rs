@@ -624,73 +624,6 @@ impl From<SzErrorKind> for SzError {
     }
 }
 
-/// If the error is an [`SzError`], returns a reference to it;
-/// otherwise returns `None`.
-///
-/// This is a convenience wrapper around `downcast_ref::<SzError>()`
-/// so callers don't need to name the concrete type.
-pub fn as_sz_error<'a>(err: &'a (dyn std::error::Error + 'static)) -> Option<&'a SzError> {
-    err.downcast_ref::<SzError>()
-}
-
-/// If the error is an [`SzError`], returns the [`SzComponent`] that produced it.
-pub fn component(err: &(dyn std::error::Error + 'static)) -> Option<SzComponent> {
-    err.downcast_ref::<SzError>().and_then(|e| e.component())
-}
-
-/// If the error is an [`SzError`], returns its severity level;
-/// otherwise returns `None`.
-pub fn severity(err: &(dyn std::error::Error + 'static)) -> Option<&'static str> {
-    err.downcast_ref::<SzError>().map(|e| e.severity())
-}
-
-/// Returns `true` if the error is an `SzError` with the given [`SzErrorKind`].
-pub fn is_kind(err: &(dyn std::error::Error + 'static), kind: SzErrorKind) -> bool {
-    err.downcast_ref::<SzError>()
-        .is_some_and(|e| e.kind() == kind)
-}
-
-/// Hierarchy-aware kind check on a `dyn Error`.
-///
-/// Returns `true` if the error is an [`SzError`] whose kind matches `kind`,
-/// honoring the error-type hierarchy.  For parent categories (`BadInput`,
-/// `General`, `Retryable`, `Unrecoverable`) all child kinds also match.
-/// Returns `false` for non-`SzError` values.
-///
-/// See [`SzErrorKind::is`] for the hierarchy rules.
-pub fn is(err: &(dyn std::error::Error + 'static), kind: SzErrorKind) -> bool {
-    err.downcast_ref::<SzError>().is_some_and(|e| e.is(kind))
-}
-
-/// Returns `true` if the error is an `SzError`.
-pub fn is_sz_error(err: &(dyn std::error::Error + 'static)) -> bool {
-    err.downcast_ref::<SzError>().is_some()
-}
-
-/// Returns `true` if the error is an `SzError` in the bad input category.
-pub fn is_bad_input(err: &(dyn std::error::Error + 'static)) -> bool {
-    err.downcast_ref::<SzError>()
-        .is_some_and(|e| e.is_bad_input())
-}
-
-/// Returns `true` if the error is an `SzError` in the general category.
-pub fn is_general(err: &(dyn std::error::Error + 'static)) -> bool {
-    err.downcast_ref::<SzError>()
-        .is_some_and(|e| e.is_general())
-}
-
-/// Returns `true` if the error is an `SzError` in the retryable category.
-pub fn is_retryable(err: &(dyn std::error::Error + 'static)) -> bool {
-    err.downcast_ref::<SzError>()
-        .is_some_and(|e| e.is_retryable())
-}
-
-/// Returns `true` if the error is an `SzError` in the unrecoverable category.
-pub fn is_unrecoverable(err: &(dyn std::error::Error + 'static)) -> bool {
-    err.downcast_ref::<SzError>()
-        .is_some_and(|e| e.is_unrecoverable())
-}
-
 // ---------------------------------------------------------------------------
 // SzErrorInspect extension trait
 // ---------------------------------------------------------------------------
@@ -743,6 +676,16 @@ pub trait SzErrorInspect {
     /// Hierarchy-aware kind check on the first `SzError` in the chain.
     fn is_sz(&self, kind: SzErrorKind) -> bool {
         self.sz_error().is_some_and(|e| e.is(kind))
+    }
+
+    /// Returns the [`SzComponent`] of the first `SzError` in the chain, if any.
+    fn sz_component(&self) -> Option<SzComponent> {
+        self.sz_error().and_then(|e| e.component())
+    }
+
+    /// Returns the severity of the first `SzError` in the chain, if any.
+    fn sz_severity(&self) -> Option<&'static str> {
+        self.sz_error().map(|e| e.severity())
     }
 }
 
