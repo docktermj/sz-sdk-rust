@@ -321,7 +321,7 @@ impl fmt::Display for SzErrorKind {
             SzErrorKind::Retryable => "retryable error",
             SzErrorKind::RetryTimeoutExceeded => "retry timeout exceeded",
             SzErrorKind::Sdk => "SDK error",
-            SzErrorKind::SzError => "SzError error",
+            SzErrorKind::SzError => "Senzing error",
             SzErrorKind::Unhandled => "unhandled error",
             SzErrorKind::UnknownDataSource => "unknown data source",
             SzErrorKind::Unrecoverable => "unrecoverable error",

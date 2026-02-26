@@ -455,7 +455,7 @@ fn kind_display() {
     assert_eq!(format!("{}", SzErrorKind::BadInput), "bad input");
     assert_eq!(format!("{}", SzErrorKind::Database), "database error");
     assert_eq!(format!("{}", SzErrorKind::Sdk), "SDK error");
-    assert_eq!(format!("{}", SzErrorKind::SzError), "SzError error");
+    assert_eq!(format!("{}", SzErrorKind::SzError), "Senzing error");
 }
 
 // ---------------------------------------------------------------------------
@@ -937,7 +937,7 @@ fn free_fn_is_false_for_non_sz() {
 fn display_without_code() {
     let err = SzError::new("something failed");
     let display = format!("{err}");
-    assert_eq!(display, "SzError error: something failed");
+    assert_eq!(display, "Senzing error: something failed");
 }
 
 #[test]
