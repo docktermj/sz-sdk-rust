@@ -273,10 +273,15 @@ impl SzError {
         }
     }
 
-    /// Sets the error code and corresponding kind, returning `self`.
+    /// Sets the error code, returning `self`.
     ///
-    /// Looks up the code in the `SZ_ERROR_TYPES` map to determine the
-    /// [`SzErrorKind`].  Unknown codes default to [`SzErrorKind::General`].
+    /// If [`with_kind`](Self::with_kind) has **not** been called (and the
+    /// error was not created via `From<SzErrorKind>`), the kind is derived
+    /// from the code using the `SZ_ERROR_TYPES` lookup table, defaulting
+    /// to [`SzErrorKind::General`] for unknown codes.
+    ///
+    /// If `with_kind` **has** been called, the explicitly set kind is
+    /// preserved and the code is stored without changing the kind.
     pub fn with_code(mut self, code: i64) -> Self {
         if !self.kind_explicit {
             let code_i32 = i32::try_from(code).ok();

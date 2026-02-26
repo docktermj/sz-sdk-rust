@@ -143,6 +143,27 @@ fn with_code_sets_code_and_kind() {
 }
 
 #[test]
+fn with_code_i64_overflow_defaults_to_general() {
+    let err = SzError::new("test").with_code(i64::MAX);
+    assert_eq!(err.kind(), SzErrorKind::General);
+    assert_eq!(err.code(), Some(i64::MAX));
+}
+
+#[test]
+fn with_code_negative_defaults_to_general() {
+    let err = SzError::new("test").with_code(-1);
+    assert_eq!(err.kind(), SzErrorKind::General);
+    assert_eq!(err.code(), Some(-1));
+}
+
+#[test]
+fn with_code_zero_defaults_to_general() {
+    let err = SzError::new("test").with_code(0);
+    assert_eq!(err.kind(), SzErrorKind::General);
+    assert_eq!(err.code(), Some(0));
+}
+
+#[test]
 fn with_code_unknown_defaults_to_general() {
     let err = SzError::new("test").with_code(999999);
     assert_eq!(err.code(), Some(999999));
@@ -170,6 +191,15 @@ fn with_code_each_category() {
         assert_eq!(err.code(), Some(code), "code {code}");
         assert_eq!(err.kind(), expected_kind, "kind for code {code}");
     }
+}
+
+#[test]
+fn with_code_called_twice_re_derives_kind() {
+    let err = SzError::new("test")
+        .with_code(2)    // BadInput
+        .with_code(999); // License
+    assert_eq!(err.kind(), SzErrorKind::License);
+    assert_eq!(err.code(), Some(999));
 }
 
 #[test]
@@ -210,6 +240,16 @@ fn with_kind_overrides_code_derived_kind() {
 }
 
 #[test]
+fn clone_preserves_kind_explicit() {
+    let err = SzError::new("test")
+        .with_kind(SzErrorKind::License)
+        .with_code(2); // kind stays License because kind_explicit=true
+    let cloned = err.clone().with_code(999); // should still stay License
+    assert_eq!(cloned.kind(), SzErrorKind::License);
+    assert_eq!(cloned.code(), Some(999));
+}
+
+#[test]
 fn with_kind_before_with_code_preserves_kind() {
     let err = SzError::new("test")
         .with_kind(SzErrorKind::License)
@@ -221,6 +261,20 @@ fn with_kind_before_with_code_preserves_kind() {
 // ---------------------------------------------------------------------------
 // with_message
 // ---------------------------------------------------------------------------
+
+#[test]
+fn with_message_called_twice_overwrites() {
+    let err = SzError::new("first").with_message("second");
+    assert_eq!(err.message(), "second");
+}
+
+#[test]
+fn with_component_called_twice_overwrites() {
+    let err = SzError::new("test")
+        .with_component(SzComponent::Engine)
+        .with_component(SzComponent::Config);
+    assert_eq!(err.component(), Some(SzComponent::Config));
+}
 
 #[test]
 fn with_message_overrides_initial() {
@@ -238,6 +292,13 @@ fn with_message_accepts_string() {
 // ---------------------------------------------------------------------------
 // From<SzErrorKind> for SzError
 // ---------------------------------------------------------------------------
+
+#[test]
+fn from_kind_then_with_code_preserves_kind() {
+    let err = SzError::from(SzErrorKind::Unrecoverable).with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::Unrecoverable);
+    assert_eq!(err.code(), Some(2));
+}
 
 #[test]
 fn from_kind_produces_no_code() {
@@ -861,6 +922,13 @@ fn free_fn_is_false_for_non_sz() {
 // ---------------------------------------------------------------------------
 // Display / std::error::Error trait
 // ---------------------------------------------------------------------------
+
+#[test]
+fn display_without_code() {
+    let err = SzError::new("something failed");
+    let display = format!("{err}");
+    assert_eq!(display, "SzError error: something failed");
+}
 
 #[test]
 fn display_includes_code_and_message() {
