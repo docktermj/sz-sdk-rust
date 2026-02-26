@@ -128,6 +128,27 @@ impl SzErrorKind {
             other => self == other,
         }
     }
+
+    /// Returns the severity level for this error kind.
+    ///
+    /// Severity levels:
+    /// - `"critical"` — License, Unrecoverable, Unhandled
+    /// - `"high"` — Database, NotInitialized
+    /// - `"medium"` — Configuration, DatabaseConnectionLost, DatabaseTransient
+    /// - `"low"` — all others (BadInput, General, NotFound, ReplaceConflict,
+    ///   Retryable, RetryTimeoutExceeded, Sdk, UnknownDataSource)
+    pub fn severity(self) -> &'static str {
+        match self {
+            SzErrorKind::License | SzErrorKind::Unrecoverable | SzErrorKind::Unhandled => {
+                "critical"
+            }
+            SzErrorKind::Database | SzErrorKind::NotInitialized => "high",
+            SzErrorKind::Configuration
+            | SzErrorKind::DatabaseConnectionLost
+            | SzErrorKind::DatabaseTransient => "medium",
+            _ => "low",
+        }
+    }
 }
 
 impl fmt::Display for SzErrorKind {
@@ -305,6 +326,13 @@ impl SzError {
     pub fn is_unrecoverable(&self) -> bool {
         self.kind.is_unrecoverable()
     }
+
+    /// Returns the severity level for this error.
+    ///
+    /// See [`SzErrorKind::severity`] for the mapping.
+    pub fn severity(&self) -> &'static str {
+        self.kind.severity()
+    }
 }
 
 impl fmt::Display for SzError {
@@ -345,6 +373,12 @@ pub fn as_sz_error<'a>(err: &'a (dyn std::error::Error + 'static)) -> Option<&'a
 /// If the error is an [`SzError`], returns the [`SzComponent`] that produced it.
 pub fn component(err: &(dyn std::error::Error + 'static)) -> Option<SzComponent> {
     err.downcast_ref::<SzError>().and_then(|e| e.component())
+}
+
+/// If the error is an [`SzError`], returns its severity level;
+/// otherwise returns `None`.
+pub fn severity(err: &(dyn std::error::Error + 'static)) -> Option<&'static str> {
+    err.downcast_ref::<SzError>().map(|e| e.severity())
 }
 
 /// Returns `true` if the error is an `SzError` with the given [`SzErrorKind`].

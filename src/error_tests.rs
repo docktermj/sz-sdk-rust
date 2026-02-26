@@ -161,6 +161,73 @@ fn kind_is_unrecoverable() {
 }
 
 // ---------------------------------------------------------------------------
+// SzErrorKind::severity
+// ---------------------------------------------------------------------------
+
+#[test]
+fn kind_severity_critical() {
+    assert_eq!(SzErrorKind::License.severity(), "critical");
+    assert_eq!(SzErrorKind::Unrecoverable.severity(), "critical");
+    assert_eq!(SzErrorKind::Unhandled.severity(), "critical");
+}
+
+#[test]
+fn kind_severity_high() {
+    assert_eq!(SzErrorKind::Database.severity(), "high");
+    assert_eq!(SzErrorKind::NotInitialized.severity(), "high");
+}
+
+#[test]
+fn kind_severity_medium() {
+    assert_eq!(SzErrorKind::Configuration.severity(), "medium");
+    assert_eq!(SzErrorKind::DatabaseConnectionLost.severity(), "medium");
+    assert_eq!(SzErrorKind::DatabaseTransient.severity(), "medium");
+}
+
+#[test]
+fn kind_severity_low() {
+    assert_eq!(SzErrorKind::BadInput.severity(), "low");
+    assert_eq!(SzErrorKind::General.severity(), "low");
+    assert_eq!(SzErrorKind::NotFound.severity(), "low");
+    assert_eq!(SzErrorKind::ReplaceConflict.severity(), "low");
+    assert_eq!(SzErrorKind::Retryable.severity(), "low");
+    assert_eq!(SzErrorKind::RetryTimeoutExceeded.severity(), "low");
+    assert_eq!(SzErrorKind::Sdk.severity(), "low");
+    assert_eq!(SzErrorKind::UnknownDataSource.severity(), "low");
+}
+
+// ---------------------------------------------------------------------------
+// SzError::severity
+// ---------------------------------------------------------------------------
+
+#[test]
+fn sz_error_severity_delegates_to_kind() {
+    assert_eq!(
+        SzError::from_code(999, "test".into()).severity(),
+        "critical"
+    ); // License
+    assert_eq!(SzError::from_code(1000, "test".into()).severity(), "high"); // Database
+    assert_eq!(SzError::from_code(1006, "test".into()).severity(), "medium"); // DatabaseConnectionLost
+    assert_eq!(SzError::from_code(2, "test".into()).severity(), "low"); // BadInput
+}
+
+// ---------------------------------------------------------------------------
+// Free function: severity
+// ---------------------------------------------------------------------------
+
+#[test]
+fn free_fn_severity_returns_some() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::from_code(999, "test".into()));
+    assert_eq!(error::severity(&*err), Some("critical"));
+}
+
+#[test]
+fn free_fn_severity_returns_none_for_non_sz() {
+    let err: Box<dyn std::error::Error> = Box::new(std::io::Error::other("not senzing"));
+    assert_eq!(error::severity(&*err), None);
+}
+
+// ---------------------------------------------------------------------------
 // SzErrorKind Display
 // ---------------------------------------------------------------------------
 
@@ -674,11 +741,12 @@ fn example_error_handling_with_match_and_if_else_as_sz_error() {
         Err(err) => {
             if let Some(szerr) = error::as_sz_error(&*err) {
                 println!(
-                    "SzError kind: {}, code: {}, retryable: {}, component: {}, message: {}",
+                    "SzError kind: {}, code: {}, retryable: {}, component: {}, severity: {}, message: {}",
                     szerr.kind(),
                     szerr.code(),
                     szerr.is_retryable(),
                     szerr.component_name(),
+                    szerr.severity(),
                     szerr.message()
                 );
             } else {
