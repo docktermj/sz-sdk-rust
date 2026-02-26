@@ -1,4 +1,6 @@
-use super::error::{self, SzComponent, SzError, SzErrorInspect, SzErrorKind, SzResult, SzResultExt};
+use super::error::{
+    self, SzComponent, SzError, SzErrorInspect, SzErrorKind, SzResult, SzResultExt,
+};
 use std::fmt;
 
 // ---------------------------------------------------------------------------
@@ -196,7 +198,7 @@ fn with_code_each_category() {
 #[test]
 fn with_code_called_twice_re_derives_kind() {
     let err = SzError::new("test")
-        .with_code(2)    // BadInput
+        .with_code(2) // BadInput
         .with_code(999); // License
     assert_eq!(err.kind(), SzErrorKind::License);
     assert_eq!(err.code(), Some(999));
@@ -422,10 +424,7 @@ fn kind_severity_low() {
 
 #[test]
 fn sz_error_severity_delegates_to_kind() {
-    assert_eq!(
-        SzError::new("test").with_code(999).severity(),
-        "critical"
-    ); // License
+    assert_eq!(SzError::new("test").with_code(999).severity(), "critical"); // License
     assert_eq!(SzError::new("test").with_code(1000).severity(), "high"); // Database
     assert_eq!(SzError::new("test").with_code(1006).severity(), "medium"); // DatabaseConnectionLost
     assert_eq!(SzError::new("test").with_code(2).severity(), "low"); // BadInput
@@ -491,7 +490,9 @@ fn component_display() {
 
 #[test]
 fn with_component_sets_component() {
-    let err = SzError::new("test").with_code(2).with_component(SzComponent::Engine);
+    let err = SzError::new("test")
+        .with_code(2)
+        .with_component(SzComponent::Engine);
     assert_eq!(err.component(), Some(SzComponent::Engine));
 }
 
@@ -509,7 +510,9 @@ fn component_is_none_for_from_kind() {
 
 #[test]
 fn clone_preserves_component() {
-    let err = SzError::new("test").with_code(2).with_component(SzComponent::Diagnostic);
+    let err = SzError::new("test")
+        .with_code(2)
+        .with_component(SzComponent::Diagnostic);
     let cloned = err.clone();
     assert_eq!(cloned.component(), Some(SzComponent::Diagnostic));
 }
@@ -531,8 +534,11 @@ fn with_component_all_variants() {
 
 #[test]
 fn free_fn_component_returns_some() {
-    let err: Box<dyn std::error::Error> =
-        Box::new(SzError::new("test").with_code(2).with_component(SzComponent::Engine));
+    let err: Box<dyn std::error::Error> = Box::new(
+        SzError::new("test")
+            .with_code(2)
+            .with_component(SzComponent::Engine),
+    );
     assert_eq!(error::component(&*err), Some(SzComponent::Engine));
 }
 
@@ -555,7 +561,9 @@ fn free_fn_component_returns_none_for_non_sz() {
 
 #[test]
 fn component_name_returns_name_when_set() {
-    let err = SzError::new("test").with_code(2).with_component(SzComponent::Engine);
+    let err = SzError::new("test")
+        .with_code(2)
+        .with_component(SzComponent::Engine);
     assert_eq!(err.component_name(), "SzEngine");
 }
 
@@ -581,7 +589,9 @@ fn component_name_all_variants() {
 
 #[test]
 fn component_name_matches_display() {
-    let err = SzError::new("test").with_code(2).with_component(SzComponent::Engine);
+    let err = SzError::new("test")
+        .with_code(2)
+        .with_component(SzComponent::Engine);
     assert_eq!(err.component_name(), format!("{}", SzComponent::Engine));
 }
 

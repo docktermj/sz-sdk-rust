@@ -184,6 +184,7 @@ impl fmt::Display for SzComponent {
 /// code `0` and an empty message — useful for quick construction in tests
 /// or when only the category matters (mirrors `std::io::Error: From<ErrorKind>`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SzErrorKind {
     BadInput,
     Configuration,
@@ -483,9 +484,8 @@ impl SzError {
     /// preserved and the code is stored without changing the kind.
     pub fn with_code(mut self, code: i64) -> Self {
         if !self.kind_explicit {
-            let code_i32 = i32::try_from(code).ok();
-            self.kind = code_i32
-                .and_then(|c| SZ_ERROR_TYPES.get(&c))
+            self.kind = SZ_ERROR_TYPES
+                .get(&code)
                 .copied()
                 .map(SzErrorKind::from)
                 .unwrap_or(SzErrorKind::General);
