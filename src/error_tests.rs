@@ -1589,3 +1589,130 @@ fn is_bad_input_err_false_for_ok() {
     let r: SzResult<()> = Ok(());
     assert!(!r.is_bad_input_err());
 }
+
+// ---------------------------------------------------------------------------
+// Named constructors
+// ---------------------------------------------------------------------------
+
+#[test]
+fn named_bad_input() {
+    let err = SzError::bad_input("invalid").with_code(999);
+    assert_eq!(err.kind(), SzErrorKind::BadInput);
+    assert_eq!(err.message(), "invalid");
+    assert_eq!(err.code(), Some(999));
+}
+
+#[test]
+fn named_configuration() {
+    let err = SzError::configuration("bad config").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::Configuration);
+    assert_eq!(err.message(), "bad config");
+}
+
+#[test]
+fn named_database() {
+    let err = SzError::database("schema error").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::Database);
+    assert_eq!(err.message(), "schema error");
+}
+
+#[test]
+fn named_database_connection_lost() {
+    let err = SzError::database_connection_lost("gone").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::DatabaseConnectionLost);
+    assert!(err.is_retryable());
+}
+
+#[test]
+fn named_database_transient() {
+    let err = SzError::database_transient("deadlock").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::DatabaseTransient);
+    assert!(err.is_retryable());
+}
+
+#[test]
+fn named_general() {
+    let err = SzError::general("something").with_code(999);
+    assert_eq!(err.kind(), SzErrorKind::General);
+}
+
+#[test]
+fn named_license() {
+    let err = SzError::license("expired").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::License);
+    assert!(err.is_unrecoverable());
+}
+
+#[test]
+fn named_not_found() {
+    let err = SzError::not_found("entity 42").with_code(999);
+    assert_eq!(err.kind(), SzErrorKind::NotFound);
+    assert!(err.is_bad_input());
+}
+
+#[test]
+fn named_not_initialized() {
+    let err = SzError::not_initialized("call init first").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::NotInitialized);
+    assert!(err.is_unrecoverable());
+}
+
+#[test]
+fn named_replace_conflict() {
+    let err = SzError::replace_conflict("conflict").with_code(999);
+    assert_eq!(err.kind(), SzErrorKind::ReplaceConflict);
+}
+
+#[test]
+fn named_retryable() {
+    let err = SzError::retryable("try again").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::Retryable);
+    assert!(err.is_retryable());
+}
+
+#[test]
+fn named_retry_timeout_exceeded() {
+    let err = SzError::retry_timeout_exceeded("timed out").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::RetryTimeoutExceeded);
+    assert!(err.is_retryable());
+}
+
+#[test]
+fn named_sdk() {
+    let err = SzError::sdk("sdk issue").with_code(999);
+    assert_eq!(err.kind(), SzErrorKind::Sdk);
+}
+
+#[test]
+fn named_unhandled() {
+    let err = SzError::unhandled("unexpected").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::Unhandled);
+    assert!(err.is_unrecoverable());
+}
+
+#[test]
+fn named_unknown_data_source() {
+    let err = SzError::unknown_data_source("FAKE").with_code(999);
+    assert_eq!(err.kind(), SzErrorKind::UnknownDataSource);
+    assert!(err.is_bad_input());
+}
+
+#[test]
+fn named_unrecoverable() {
+    let err = SzError::unrecoverable("fatal").with_code(2);
+    assert_eq!(err.kind(), SzErrorKind::Unrecoverable);
+    assert!(err.is_unrecoverable());
+}
+
+#[test]
+fn named_constructor_chains_with_builder() {
+    use std::error::Error;
+    let err = SzError::database_transient("deadlock")
+        .with_code(1008)
+        .with_component(SzComponent::Engine)
+        .with_source(std::io::Error::other("underlying"));
+    assert_eq!(err.kind(), SzErrorKind::DatabaseTransient);
+    assert_eq!(err.code(), Some(1008));
+    assert_eq!(err.component(), Some(SzComponent::Engine));
+    assert!(err.source().is_some());
+}

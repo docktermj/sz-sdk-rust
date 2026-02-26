@@ -273,6 +273,86 @@ impl SzError {
         }
     }
 
+    /// Creates a bad-input error.
+    pub fn bad_input(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::BadInput)
+    }
+
+    /// Creates a configuration error.
+    pub fn configuration(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::Configuration)
+    }
+
+    /// Creates a database error.
+    pub fn database(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::Database)
+    }
+
+    /// Creates a database-connection-lost error.
+    pub fn database_connection_lost(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::DatabaseConnectionLost)
+    }
+
+    /// Creates a database-transient error.
+    pub fn database_transient(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::DatabaseTransient)
+    }
+
+    /// Creates a general error.
+    pub fn general(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::General)
+    }
+
+    /// Creates a license error.
+    pub fn license(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::License)
+    }
+
+    /// Creates a not-found error.
+    pub fn not_found(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::NotFound)
+    }
+
+    /// Creates a not-initialized error.
+    pub fn not_initialized(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::NotInitialized)
+    }
+
+    /// Creates a replace-conflict error.
+    pub fn replace_conflict(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::ReplaceConflict)
+    }
+
+    /// Creates a retryable error.
+    pub fn retryable(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::Retryable)
+    }
+
+    /// Creates a retry-timeout-exceeded error.
+    pub fn retry_timeout_exceeded(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::RetryTimeoutExceeded)
+    }
+
+    /// Creates an SDK error.
+    pub fn sdk(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::Sdk)
+    }
+
+    /// Creates an unhandled error.
+    pub fn unhandled(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::Unhandled)
+    }
+
+    /// Creates an unknown-data-source error.
+    pub fn unknown_data_source(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::UnknownDataSource)
+    }
+
+    /// Creates an unrecoverable error.
+    pub fn unrecoverable(message: impl Into<String>) -> Self {
+        Self::new(message).with_kind(SzErrorKind::Unrecoverable)
+    }
+
     /// Sets the error code, returning `self`.
     ///
     /// If [`with_kind`](Self::with_kind) has **not** been called (and the
