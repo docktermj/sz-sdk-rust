@@ -11,6 +11,7 @@ use phf::phf_map;
 /// numeric error codes. Use `SzError::new(...).with_code(...)` to construct
 /// the appropriate error from an error code and message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 pub enum SzError {
     SzBadInputError,
     SzConfigurationError,

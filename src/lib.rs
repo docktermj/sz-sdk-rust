@@ -15,7 +15,7 @@ mod engine;
 mod error;
 #[cfg(test)]
 mod error_tests;
-pub mod errortypes;
+pub(crate) mod errortypes;
 mod factory;
 pub mod flags;
 pub mod parameters;
