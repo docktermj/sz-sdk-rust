@@ -2,6 +2,7 @@
 name = "sz-sdk"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.78"
 license = "Apache-2.0"
 description = "Rust trait definitions for the Senzing SDK"
 repository = "https://github.com/docktermj/sz-sdk-rust"
@@ -12,4 +13,4 @@ keywords = ["senzing", "entity-resolution", "sdk", "traits"]
 categories = ["api-bindings", "data-structures"]
 
 [dependencies]
-phf = { version = "0.11", features = ["macros"] }
+phf = { version = "0.11.2", features = ["macros"] }
