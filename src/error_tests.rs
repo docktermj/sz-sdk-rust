@@ -1761,3 +1761,753 @@ fn category_on_sz_error() {
     assert_eq!(SzError::bad_input("x").category(), "bad_input");
     assert_eq!(SzError::configuration("x").category(), "configuration");
 }
+
+// ---------------------------------------------------------------------------
+// hierarchy: leaf-first type chain for every SzErrorKind
+// ---------------------------------------------------------------------------
+
+#[test]
+fn hierarchy_bad_input() {
+    assert_eq!(SzErrorKind::BadInput.hierarchy(), &[SzErrorKind::BadInput]);
+}
+
+#[test]
+fn hierarchy_not_found() {
+    assert_eq!(
+        SzErrorKind::NotFound.hierarchy(),
+        &[SzErrorKind::NotFound, SzErrorKind::BadInput]
+    );
+}
+
+#[test]
+fn hierarchy_unknown_data_source() {
+    assert_eq!(
+        SzErrorKind::UnknownDataSource.hierarchy(),
+        &[SzErrorKind::UnknownDataSource, SzErrorKind::BadInput]
+    );
+}
+
+#[test]
+fn hierarchy_general() {
+    assert_eq!(SzErrorKind::General.hierarchy(), &[SzErrorKind::General]);
+}
+
+#[test]
+fn hierarchy_configuration() {
+    assert_eq!(
+        SzErrorKind::Configuration.hierarchy(),
+        &[SzErrorKind::Configuration, SzErrorKind::General]
+    );
+}
+
+#[test]
+fn hierarchy_replace_conflict() {
+    assert_eq!(
+        SzErrorKind::ReplaceConflict.hierarchy(),
+        &[SzErrorKind::ReplaceConflict, SzErrorKind::General]
+    );
+}
+
+#[test]
+fn hierarchy_sdk() {
+    assert_eq!(
+        SzErrorKind::Sdk.hierarchy(),
+        &[SzErrorKind::Sdk, SzErrorKind::General]
+    );
+}
+
+#[test]
+fn hierarchy_retryable() {
+    assert_eq!(
+        SzErrorKind::Retryable.hierarchy(),
+        &[SzErrorKind::Retryable]
+    );
+}
+
+#[test]
+fn hierarchy_database_connection_lost() {
+    assert_eq!(
+        SzErrorKind::DatabaseConnectionLost.hierarchy(),
+        &[SzErrorKind::DatabaseConnectionLost, SzErrorKind::Retryable]
+    );
+}
+
+#[test]
+fn hierarchy_database_transient() {
+    assert_eq!(
+        SzErrorKind::DatabaseTransient.hierarchy(),
+        &[SzErrorKind::DatabaseTransient, SzErrorKind::Retryable]
+    );
+}
+
+#[test]
+fn hierarchy_retry_timeout_exceeded() {
+    assert_eq!(
+        SzErrorKind::RetryTimeoutExceeded.hierarchy(),
+        &[SzErrorKind::RetryTimeoutExceeded, SzErrorKind::Retryable]
+    );
+}
+
+#[test]
+fn hierarchy_unrecoverable() {
+    assert_eq!(
+        SzErrorKind::Unrecoverable.hierarchy(),
+        &[SzErrorKind::Unrecoverable]
+    );
+}
+
+#[test]
+fn hierarchy_database() {
+    assert_eq!(
+        SzErrorKind::Database.hierarchy(),
+        &[SzErrorKind::Database, SzErrorKind::Unrecoverable]
+    );
+}
+
+#[test]
+fn hierarchy_license() {
+    assert_eq!(
+        SzErrorKind::License.hierarchy(),
+        &[SzErrorKind::License, SzErrorKind::Unrecoverable]
+    );
+}
+
+#[test]
+fn hierarchy_not_initialized() {
+    assert_eq!(
+        SzErrorKind::NotInitialized.hierarchy(),
+        &[SzErrorKind::NotInitialized, SzErrorKind::Unrecoverable]
+    );
+}
+
+#[test]
+fn hierarchy_unhandled() {
+    assert_eq!(
+        SzErrorKind::Unhandled.hierarchy(),
+        &[SzErrorKind::Unhandled, SzErrorKind::Unrecoverable]
+    );
+}
+
+#[test]
+fn hierarchy_sz_error() {
+    assert_eq!(SzErrorKind::SzError.hierarchy(), &[SzErrorKind::SzError]);
+}
+
+#[test]
+fn hierarchy_on_sz_error_delegates() {
+    let err = SzError::database_connection_lost("gone");
+    assert_eq!(
+        err.hierarchy(),
+        &[SzErrorKind::DatabaseConnectionLost, SzErrorKind::Retryable]
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Leaf-level predicates on SzErrorKind
+// ---------------------------------------------------------------------------
+
+#[test]
+fn kind_is_configuration() {
+    assert!(SzErrorKind::Configuration.is_configuration());
+    assert!(!SzErrorKind::General.is_configuration());
+}
+
+#[test]
+fn kind_is_license() {
+    assert!(SzErrorKind::License.is_license());
+    assert!(!SzErrorKind::Unrecoverable.is_license());
+}
+
+#[test]
+fn kind_is_not_found() {
+    assert!(SzErrorKind::NotFound.is_not_found());
+    assert!(!SzErrorKind::BadInput.is_not_found());
+}
+
+#[test]
+fn kind_is_not_initialized() {
+    assert!(SzErrorKind::NotInitialized.is_not_initialized());
+    assert!(!SzErrorKind::Unrecoverable.is_not_initialized());
+}
+
+#[test]
+fn kind_is_replace_conflict() {
+    assert!(SzErrorKind::ReplaceConflict.is_replace_conflict());
+    assert!(!SzErrorKind::General.is_replace_conflict());
+}
+
+#[test]
+fn kind_is_sdk() {
+    assert!(SzErrorKind::Sdk.is_sdk());
+    assert!(!SzErrorKind::General.is_sdk());
+}
+
+#[test]
+fn kind_is_unhandled() {
+    assert!(SzErrorKind::Unhandled.is_unhandled());
+    assert!(!SzErrorKind::Unrecoverable.is_unhandled());
+}
+
+#[test]
+fn kind_is_unknown_data_source() {
+    assert!(SzErrorKind::UnknownDataSource.is_unknown_data_source());
+    assert!(!SzErrorKind::BadInput.is_unknown_data_source());
+}
+
+// ---------------------------------------------------------------------------
+// Leaf-level predicates on SzError
+// ---------------------------------------------------------------------------
+
+#[test]
+fn sz_error_is_configuration() {
+    assert!(SzError::configuration("bad").is_configuration());
+    assert!(!SzError::general("other").is_configuration());
+}
+
+#[test]
+fn sz_error_is_license() {
+    assert!(SzError::license("expired").is_license());
+    assert!(!SzError::unrecoverable("other").is_license());
+}
+
+#[test]
+fn sz_error_is_not_found() {
+    assert!(SzError::not_found("missing").is_not_found());
+    assert!(!SzError::bad_input("other").is_not_found());
+}
+
+#[test]
+fn sz_error_is_not_initialized() {
+    assert!(SzError::not_initialized("init").is_not_initialized());
+    assert!(!SzError::unrecoverable("other").is_not_initialized());
+}
+
+#[test]
+fn sz_error_is_replace_conflict() {
+    assert!(SzError::replace_conflict("conflict").is_replace_conflict());
+    assert!(!SzError::general("other").is_replace_conflict());
+}
+
+#[test]
+fn sz_error_is_sdk() {
+    assert!(SzError::sdk("sdk").is_sdk());
+    assert!(!SzError::general("other").is_sdk());
+}
+
+#[test]
+fn sz_error_is_unhandled() {
+    assert!(SzError::unhandled("unexpected").is_unhandled());
+    assert!(!SzError::unrecoverable("other").is_unhandled());
+}
+
+#[test]
+fn sz_error_is_unknown_data_source() {
+    assert!(SzError::unknown_data_source("FAKE").is_unknown_data_source());
+    assert!(!SzError::bad_input("other").is_unknown_data_source());
+}
+
+// ---------------------------------------------------------------------------
+// is_sz_database on SzErrorInspect
+// ---------------------------------------------------------------------------
+
+#[test]
+fn inspect_is_sz_database_true() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::database("schema"));
+    assert!(err.is_sz_database());
+}
+
+#[test]
+fn inspect_is_sz_database_connection_lost() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::database_connection_lost("gone"));
+    assert!(err.is_sz_database());
+}
+
+#[test]
+fn inspect_is_sz_database_transient() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::database_transient("deadlock"));
+    assert!(err.is_sz_database());
+}
+
+#[test]
+fn inspect_is_sz_database_false() {
+    let err: Box<dyn std::error::Error> = Box::new(SzError::license("expired"));
+    assert!(!err.is_sz_database());
+}
+
+#[test]
+fn inspect_is_sz_database_non_senzing() {
+    let err: Box<dyn std::error::Error> = Box::new(std::io::Error::other("not senzing"));
+    assert!(!err.is_sz_database());
+}
+
+// ---------------------------------------------------------------------------
+// hierarchy: structural invariants
+// ---------------------------------------------------------------------------
+
+#[test]
+fn hierarchy_first_element_is_self() {
+    let all_kinds = [
+        SzErrorKind::BadInput,
+        SzErrorKind::Configuration,
+        SzErrorKind::Database,
+        SzErrorKind::DatabaseConnectionLost,
+        SzErrorKind::DatabaseTransient,
+        SzErrorKind::General,
+        SzErrorKind::License,
+        SzErrorKind::NotFound,
+        SzErrorKind::NotInitialized,
+        SzErrorKind::ReplaceConflict,
+        SzErrorKind::Retryable,
+        SzErrorKind::RetryTimeoutExceeded,
+        SzErrorKind::Sdk,
+        SzErrorKind::SzError,
+        SzErrorKind::Unhandled,
+        SzErrorKind::UnknownDataSource,
+        SzErrorKind::Unrecoverable,
+    ];
+    for kind in all_kinds {
+        let h = kind.hierarchy();
+        assert!(
+            !h.is_empty(),
+            "{kind:?} hierarchy must not be empty"
+        );
+        assert_eq!(
+            h[0], kind,
+            "{kind:?} hierarchy first element must be self"
+        );
+    }
+}
+
+#[test]
+fn hierarchy_parents_have_length_one() {
+    let parents = [
+        SzErrorKind::BadInput,
+        SzErrorKind::General,
+        SzErrorKind::Retryable,
+        SzErrorKind::Unrecoverable,
+        SzErrorKind::SzError,
+    ];
+    for kind in parents {
+        assert_eq!(
+            kind.hierarchy().len(),
+            1,
+            "{kind:?} is a parent/root and should have hierarchy length 1"
+        );
+    }
+}
+
+#[test]
+fn hierarchy_leaves_have_length_two() {
+    let leaves = [
+        SzErrorKind::NotFound,
+        SzErrorKind::UnknownDataSource,
+        SzErrorKind::Configuration,
+        SzErrorKind::ReplaceConflict,
+        SzErrorKind::Sdk,
+        SzErrorKind::DatabaseConnectionLost,
+        SzErrorKind::DatabaseTransient,
+        SzErrorKind::RetryTimeoutExceeded,
+        SzErrorKind::Database,
+        SzErrorKind::License,
+        SzErrorKind::NotInitialized,
+        SzErrorKind::Unhandled,
+    ];
+    for kind in leaves {
+        assert_eq!(
+            kind.hierarchy().len(),
+            2,
+            "{kind:?} is a leaf and should have hierarchy length 2"
+        );
+    }
+}
+
+#[test]
+fn hierarchy_last_element_matches_parent_predicate() {
+    // For each leaf, the last element of the hierarchy should be the parent
+    // category, and is() should return true for that parent.
+    let leaves_and_parents = [
+        (SzErrorKind::NotFound, SzErrorKind::BadInput),
+        (SzErrorKind::UnknownDataSource, SzErrorKind::BadInput),
+        (SzErrorKind::Configuration, SzErrorKind::General),
+        (SzErrorKind::ReplaceConflict, SzErrorKind::General),
+        (SzErrorKind::Sdk, SzErrorKind::General),
+        (SzErrorKind::DatabaseConnectionLost, SzErrorKind::Retryable),
+        (SzErrorKind::DatabaseTransient, SzErrorKind::Retryable),
+        (SzErrorKind::RetryTimeoutExceeded, SzErrorKind::Retryable),
+        (SzErrorKind::Database, SzErrorKind::Unrecoverable),
+        (SzErrorKind::License, SzErrorKind::Unrecoverable),
+        (SzErrorKind::NotInitialized, SzErrorKind::Unrecoverable),
+        (SzErrorKind::Unhandled, SzErrorKind::Unrecoverable),
+    ];
+    for (leaf, parent) in leaves_and_parents {
+        let h = leaf.hierarchy();
+        assert_eq!(
+            *h.last().unwrap(),
+            parent,
+            "{leaf:?} hierarchy last element should be {parent:?}"
+        );
+        assert!(
+            leaf.is(parent),
+            "{leaf:?}.is({parent:?}) should be true"
+        );
+    }
+}
+
+#[test]
+fn hierarchy_is_consistent_with_is_method() {
+    // Every element in hierarchy() should cause is() to return true.
+    let all_kinds = [
+        SzErrorKind::BadInput,
+        SzErrorKind::Configuration,
+        SzErrorKind::Database,
+        SzErrorKind::DatabaseConnectionLost,
+        SzErrorKind::DatabaseTransient,
+        SzErrorKind::General,
+        SzErrorKind::License,
+        SzErrorKind::NotFound,
+        SzErrorKind::NotInitialized,
+        SzErrorKind::ReplaceConflict,
+        SzErrorKind::Retryable,
+        SzErrorKind::RetryTimeoutExceeded,
+        SzErrorKind::Sdk,
+        SzErrorKind::SzError,
+        SzErrorKind::Unhandled,
+        SzErrorKind::UnknownDataSource,
+        SzErrorKind::Unrecoverable,
+    ];
+    for kind in all_kinds {
+        for ancestor in kind.hierarchy() {
+            assert!(
+                kind.is(*ancestor),
+                "{kind:?}.is({ancestor:?}) should be true since {ancestor:?} is in its hierarchy"
+            );
+        }
+    }
+}
+
+#[test]
+fn hierarchy_is_zero_allocation() {
+    // Calling hierarchy() twice returns the same pointer, proving static allocation.
+    let h1 = SzErrorKind::DatabaseTransient.hierarchy();
+    let h2 = SzErrorKind::DatabaseTransient.hierarchy();
+    assert!(std::ptr::eq(h1, h2));
+}
+
+// ---------------------------------------------------------------------------
+// hierarchy: delegation through SzError for every family
+// ---------------------------------------------------------------------------
+
+#[test]
+fn hierarchy_delegates_for_all_families() {
+    // One representative from each family.
+    let cases: Vec<(SzError, &[SzErrorKind])> = vec![
+        (SzError::not_found("x"), &[SzErrorKind::NotFound, SzErrorKind::BadInput]),
+        (SzError::configuration("x"), &[SzErrorKind::Configuration, SzErrorKind::General]),
+        (SzError::database_transient("x"), &[SzErrorKind::DatabaseTransient, SzErrorKind::Retryable]),
+        (SzError::license("x"), &[SzErrorKind::License, SzErrorKind::Unrecoverable]),
+        (SzError::new("x"), &[SzErrorKind::SzError]),
+    ];
+    for (err, expected) in cases {
+        assert_eq!(err.hierarchy(), expected, "hierarchy mismatch for {:?}", err.kind());
+    }
+}
+
+#[test]
+fn hierarchy_delegates_for_parent_kinds() {
+    assert_eq!(SzError::bad_input("x").hierarchy(), &[SzErrorKind::BadInput]);
+    assert_eq!(SzError::general("x").hierarchy(), &[SzErrorKind::General]);
+    assert_eq!(SzError::retryable("x").hierarchy(), &[SzErrorKind::Retryable]);
+    assert_eq!(SzError::unrecoverable("x").hierarchy(), &[SzErrorKind::Unrecoverable]);
+}
+
+// ---------------------------------------------------------------------------
+// Leaf predicates: exhaustive negative checks on SzErrorKind
+// ---------------------------------------------------------------------------
+
+#[test]
+fn kind_leaf_predicates_false_for_all_other_kinds() {
+    // Each predicate should return true for exactly one kind.
+    let predicate_kind_pairs: Vec<(fn(SzErrorKind) -> bool, SzErrorKind)> = vec![
+        (SzErrorKind::is_configuration, SzErrorKind::Configuration),
+        (SzErrorKind::is_license, SzErrorKind::License),
+        (SzErrorKind::is_not_found, SzErrorKind::NotFound),
+        (SzErrorKind::is_not_initialized, SzErrorKind::NotInitialized),
+        (SzErrorKind::is_replace_conflict, SzErrorKind::ReplaceConflict),
+        (SzErrorKind::is_sdk, SzErrorKind::Sdk),
+        (SzErrorKind::is_unhandled, SzErrorKind::Unhandled),
+        (SzErrorKind::is_unknown_data_source, SzErrorKind::UnknownDataSource),
+    ];
+    let all_kinds = [
+        SzErrorKind::BadInput,
+        SzErrorKind::Configuration,
+        SzErrorKind::Database,
+        SzErrorKind::DatabaseConnectionLost,
+        SzErrorKind::DatabaseTransient,
+        SzErrorKind::General,
+        SzErrorKind::License,
+        SzErrorKind::NotFound,
+        SzErrorKind::NotInitialized,
+        SzErrorKind::ReplaceConflict,
+        SzErrorKind::Retryable,
+        SzErrorKind::RetryTimeoutExceeded,
+        SzErrorKind::Sdk,
+        SzErrorKind::SzError,
+        SzErrorKind::Unhandled,
+        SzErrorKind::UnknownDataSource,
+        SzErrorKind::Unrecoverable,
+    ];
+    for (predicate, expected_kind) in &predicate_kind_pairs {
+        for kind in &all_kinds {
+            if *kind == *expected_kind {
+                assert!(predicate(*kind), "{kind:?} should match its own predicate");
+            } else {
+                assert!(
+                    !predicate(*kind),
+                    "{kind:?} should NOT match the predicate for {expected_kind:?}"
+                );
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Leaf predicates: siblings don't cross-match
+// ---------------------------------------------------------------------------
+
+#[test]
+fn leaf_predicates_sibling_isolation_bad_input_family() {
+    // NotFound and UnknownDataSource are siblings under BadInput.
+    assert!(!SzErrorKind::NotFound.is_unknown_data_source());
+    assert!(!SzErrorKind::UnknownDataSource.is_not_found());
+}
+
+#[test]
+fn leaf_predicates_sibling_isolation_general_family() {
+    assert!(!SzErrorKind::Configuration.is_replace_conflict());
+    assert!(!SzErrorKind::Configuration.is_sdk());
+    assert!(!SzErrorKind::ReplaceConflict.is_configuration());
+    assert!(!SzErrorKind::ReplaceConflict.is_sdk());
+    assert!(!SzErrorKind::Sdk.is_configuration());
+    assert!(!SzErrorKind::Sdk.is_replace_conflict());
+}
+
+#[test]
+fn leaf_predicates_sibling_isolation_unrecoverable_family() {
+    assert!(!SzErrorKind::Database.is_license());
+    assert!(!SzErrorKind::Database.is_not_initialized());
+    assert!(!SzErrorKind::Database.is_unhandled());
+    assert!(!SzErrorKind::License.is_not_initialized());
+    assert!(!SzErrorKind::License.is_unhandled());
+    assert!(!SzErrorKind::NotInitialized.is_license());
+    assert!(!SzErrorKind::Unhandled.is_license());
+}
+
+// ---------------------------------------------------------------------------
+// Leaf predicates: parent kinds return false for leaf predicates
+// ---------------------------------------------------------------------------
+
+#[test]
+fn leaf_predicates_false_for_parent_kinds() {
+    // Parent kinds should not match any leaf predicate.
+    let parents = [
+        SzErrorKind::BadInput,
+        SzErrorKind::General,
+        SzErrorKind::Retryable,
+        SzErrorKind::Unrecoverable,
+        SzErrorKind::SzError,
+    ];
+    for parent in parents {
+        assert!(!parent.is_configuration(), "{parent:?}");
+        assert!(!parent.is_license(), "{parent:?}");
+        assert!(!parent.is_not_found(), "{parent:?}");
+        assert!(!parent.is_not_initialized(), "{parent:?}");
+        assert!(!parent.is_replace_conflict(), "{parent:?}");
+        assert!(!parent.is_sdk(), "{parent:?}");
+        assert!(!parent.is_unhandled(), "{parent:?}");
+        assert!(!parent.is_unknown_data_source(), "{parent:?}");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Leaf predicates on SzError: with_code preserves explicit kind
+// ---------------------------------------------------------------------------
+
+#[test]
+fn leaf_predicate_survives_with_code() {
+    // Named constructor sets kind_explicit, so with_code should not change it.
+    let err = SzError::configuration("bad config").with_code(999);
+    assert!(err.is_configuration());
+    assert!(!err.is_license());
+}
+
+#[test]
+fn leaf_predicate_not_found_survives_with_code() {
+    let err = SzError::not_found("entity 42").with_code(14);
+    assert!(err.is_not_found());
+    assert!(err.is_bad_input());
+}
+
+#[test]
+fn leaf_predicate_from_code_derived_kind() {
+    // When kind is derived from code (not explicit), leaf predicates should still work.
+    let err = SzError::new("test").with_code(999);
+    assert!(err.is_license());
+    assert!(err.is_unrecoverable());
+    assert!(!err.is_configuration());
+}
+
+// ---------------------------------------------------------------------------
+// Leaf predicates on SzError: combined with builder methods
+// ---------------------------------------------------------------------------
+
+#[test]
+fn leaf_predicate_with_component_and_source() {
+    let err = SzError::not_initialized("call init first")
+        .with_code(2)
+        .with_component(SzComponent::Engine)
+        .with_source(std::io::Error::other("underlying"));
+    assert!(err.is_not_initialized());
+    assert!(err.is_unrecoverable());
+    assert!(!err.is_not_found());
+}
+
+#[test]
+fn leaf_predicate_after_clone() {
+    let err = SzError::sdk("issue");
+    let cloned = err.clone();
+    assert!(cloned.is_sdk());
+    assert!(cloned.is_general());
+    assert!(!cloned.is_configuration());
+}
+
+// ---------------------------------------------------------------------------
+// Leaf predicates on SzError: from SzErrorKind conversion
+// ---------------------------------------------------------------------------
+
+#[test]
+fn leaf_predicate_from_kind_conversion() {
+    let err: SzError = SzErrorKind::License.into();
+    assert!(err.is_license());
+    assert!(err.is_unrecoverable());
+    assert!(!err.is_database());
+}
+
+#[test]
+fn leaf_predicate_from_kind_configuration() {
+    let err: SzError = SzErrorKind::Configuration.into();
+    assert!(err.is_configuration());
+    assert!(err.is_general());
+}
+
+// ---------------------------------------------------------------------------
+// is_sz_database on SzErrorInspect: blanket impl (concrete types)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn inspect_is_sz_database_blanket_concrete() {
+    let err = SzError::database("schema error");
+    assert!(err.is_sz_database());
+}
+
+#[test]
+fn inspect_is_sz_database_blanket_concrete_false() {
+    let err = SzError::not_found("missing");
+    assert!(!err.is_sz_database());
+}
+
+// ---------------------------------------------------------------------------
+// is_sz_database on SzErrorInspect: through wrapped error chain
+// ---------------------------------------------------------------------------
+
+#[test]
+fn inspect_is_sz_database_through_wrapper() {
+    #[derive(Debug)]
+    struct Wrapper(SzError);
+    impl fmt::Display for Wrapper {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "wrapped: {}", self.0)
+        }
+    }
+    impl std::error::Error for Wrapper {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(&self.0)
+        }
+    }
+
+    let wrapper = Wrapper(SzError::database_connection_lost("gone"));
+    assert!(wrapper.is_sz_database());
+    assert!(wrapper.is_sz_retryable());
+}
+
+#[test]
+fn inspect_is_sz_database_through_wrapper_false() {
+    #[derive(Debug)]
+    struct Wrapper(SzError);
+    impl fmt::Display for Wrapper {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "wrapped: {}", self.0)
+        }
+    }
+    impl std::error::Error for Wrapper {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(&self.0)
+        }
+    }
+
+    let wrapper = Wrapper(SzError::configuration("bad"));
+    assert!(!wrapper.is_sz_database());
+    assert!(wrapper.is_sz_general());
+}
+
+// ---------------------------------------------------------------------------
+// is_sz_database via Send + Sync dyn Error
+// ---------------------------------------------------------------------------
+
+#[test]
+fn inspect_is_sz_database_send_sync() {
+    let err: Box<dyn std::error::Error + Send + Sync> =
+        Box::new(SzError::database_transient("deadlock"));
+    assert!(err.is_sz_database());
+}
+
+#[test]
+fn inspect_is_sz_database_send_only() {
+    let err: Box<dyn std::error::Error + Send> =
+        Box::new(SzError::database("corruption"));
+    assert!(err.is_sz_database());
+}
+
+// ---------------------------------------------------------------------------
+// hierarchy + leaf predicates: consistency check
+// ---------------------------------------------------------------------------
+
+#[test]
+fn hierarchy_leaf_matches_own_leaf_predicate() {
+    // For each leaf kind, ensure its leaf predicate returns true and its
+    // hierarchy[0] is the same kind that the predicate checks.
+    assert!(SzErrorKind::Configuration.hierarchy()[0].is_configuration());
+    assert!(SzErrorKind::License.hierarchy()[0].is_license());
+    assert!(SzErrorKind::NotFound.hierarchy()[0].is_not_found());
+    assert!(SzErrorKind::NotInitialized.hierarchy()[0].is_not_initialized());
+    assert!(SzErrorKind::ReplaceConflict.hierarchy()[0].is_replace_conflict());
+    assert!(SzErrorKind::Sdk.hierarchy()[0].is_sdk());
+    assert!(SzErrorKind::Unhandled.hierarchy()[0].is_unhandled());
+    assert!(SzErrorKind::UnknownDataSource.hierarchy()[0].is_unknown_data_source());
+}
+
+#[test]
+fn hierarchy_parent_matches_family_predicate() {
+    // For each leaf, the parent (hierarchy[1]) should match the family predicate.
+    assert!(SzErrorKind::NotFound.hierarchy()[1].is_bad_input());
+    assert!(SzErrorKind::UnknownDataSource.hierarchy()[1].is_bad_input());
+    assert!(SzErrorKind::Configuration.hierarchy()[1].is_general());
+    assert!(SzErrorKind::ReplaceConflict.hierarchy()[1].is_general());
+    assert!(SzErrorKind::Sdk.hierarchy()[1].is_general());
+    assert!(SzErrorKind::DatabaseConnectionLost.hierarchy()[1].is_retryable());
+    assert!(SzErrorKind::DatabaseTransient.hierarchy()[1].is_retryable());
+    assert!(SzErrorKind::RetryTimeoutExceeded.hierarchy()[1].is_retryable());
+    assert!(SzErrorKind::Database.hierarchy()[1].is_unrecoverable());
+    assert!(SzErrorKind::License.hierarchy()[1].is_unrecoverable());
+    assert!(SzErrorKind::NotInitialized.hierarchy()[1].is_unrecoverable());
+    assert!(SzErrorKind::Unhandled.hierarchy()[1].is_unrecoverable());
+}

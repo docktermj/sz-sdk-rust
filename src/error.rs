@@ -315,6 +315,103 @@ impl SzErrorKind {
         }
     }
 
+    /// Returns the error kind hierarchy as a static slice, ordered leaf-first.
+    ///
+    /// For leaf kinds the slice contains the leaf followed by its parent(s).
+    /// For parent kinds the slice contains only that parent.
+    /// For the root `SzError` the slice contains only `SzError`.
+    ///
+    /// This is zero-allocation — every call returns a `&'static` reference.
+    ///
+    /// # Examples
+    /// ```
+    /// # use sz_sdk::SzErrorKind;
+    /// assert_eq!(
+    ///     SzErrorKind::DatabaseConnectionLost.hierarchy(),
+    ///     &[SzErrorKind::DatabaseConnectionLost, SzErrorKind::Retryable],
+    /// );
+    /// assert_eq!(
+    ///     SzErrorKind::Retryable.hierarchy(),
+    ///     &[SzErrorKind::Retryable],
+    /// );
+    /// ```
+    pub fn hierarchy(self) -> &'static [SzErrorKind] {
+        match self {
+            // BadInput family
+            SzErrorKind::BadInput => &[SzErrorKind::BadInput],
+            SzErrorKind::NotFound => &[SzErrorKind::NotFound, SzErrorKind::BadInput],
+            SzErrorKind::UnknownDataSource => {
+                &[SzErrorKind::UnknownDataSource, SzErrorKind::BadInput]
+            }
+            // General family
+            SzErrorKind::General => &[SzErrorKind::General],
+            SzErrorKind::Configuration => &[SzErrorKind::Configuration, SzErrorKind::General],
+            SzErrorKind::ReplaceConflict => &[SzErrorKind::ReplaceConflict, SzErrorKind::General],
+            SzErrorKind::Sdk => &[SzErrorKind::Sdk, SzErrorKind::General],
+            // Retryable family
+            SzErrorKind::Retryable => &[SzErrorKind::Retryable],
+            SzErrorKind::DatabaseConnectionLost => {
+                &[SzErrorKind::DatabaseConnectionLost, SzErrorKind::Retryable]
+            }
+            SzErrorKind::DatabaseTransient => {
+                &[SzErrorKind::DatabaseTransient, SzErrorKind::Retryable]
+            }
+            SzErrorKind::RetryTimeoutExceeded => {
+                &[SzErrorKind::RetryTimeoutExceeded, SzErrorKind::Retryable]
+            }
+            // Unrecoverable family
+            SzErrorKind::Unrecoverable => &[SzErrorKind::Unrecoverable],
+            SzErrorKind::Database => &[SzErrorKind::Database, SzErrorKind::Unrecoverable],
+            SzErrorKind::License => &[SzErrorKind::License, SzErrorKind::Unrecoverable],
+            SzErrorKind::NotInitialized => {
+                &[SzErrorKind::NotInitialized, SzErrorKind::Unrecoverable]
+            }
+            SzErrorKind::Unhandled => &[SzErrorKind::Unhandled, SzErrorKind::Unrecoverable],
+            // Root
+            SzErrorKind::SzError => &[SzErrorKind::SzError],
+        }
+    }
+
+    /// Returns `true` if this is a configuration error.
+    pub fn is_configuration(self) -> bool {
+        matches!(self, SzErrorKind::Configuration)
+    }
+
+    /// Returns `true` if this is a license error.
+    pub fn is_license(self) -> bool {
+        matches!(self, SzErrorKind::License)
+    }
+
+    /// Returns `true` if this is a not-found error.
+    pub fn is_not_found(self) -> bool {
+        matches!(self, SzErrorKind::NotFound)
+    }
+
+    /// Returns `true` if this is a not-initialized error.
+    pub fn is_not_initialized(self) -> bool {
+        matches!(self, SzErrorKind::NotInitialized)
+    }
+
+    /// Returns `true` if this is a replace-conflict error.
+    pub fn is_replace_conflict(self) -> bool {
+        matches!(self, SzErrorKind::ReplaceConflict)
+    }
+
+    /// Returns `true` if this is an SDK error.
+    pub fn is_sdk(self) -> bool {
+        matches!(self, SzErrorKind::Sdk)
+    }
+
+    /// Returns `true` if this is an unhandled error.
+    pub fn is_unhandled(self) -> bool {
+        matches!(self, SzErrorKind::Unhandled)
+    }
+
+    /// Returns `true` if this is an unknown-data-source error.
+    pub fn is_unknown_data_source(self) -> bool {
+        matches!(self, SzErrorKind::UnknownDataSource)
+    }
+
     /// Returns the error category as a static string slug.
     ///
     /// Useful for structured logging, metrics, and error reporting systems.
@@ -640,6 +737,53 @@ impl SzError {
     pub fn category(&self) -> &'static str {
         self.kind.category()
     }
+
+    /// Returns the error kind hierarchy as a static slice, ordered leaf-first.
+    ///
+    /// See [`SzErrorKind::hierarchy`] for details.
+    pub fn hierarchy(&self) -> &'static [SzErrorKind] {
+        self.kind.hierarchy()
+    }
+
+    /// Returns `true` if this is a configuration error.
+    pub fn is_configuration(&self) -> bool {
+        self.kind.is_configuration()
+    }
+
+    /// Returns `true` if this is a license error.
+    pub fn is_license(&self) -> bool {
+        self.kind.is_license()
+    }
+
+    /// Returns `true` if this is a not-found error.
+    pub fn is_not_found(&self) -> bool {
+        self.kind.is_not_found()
+    }
+
+    /// Returns `true` if this is a not-initialized error.
+    pub fn is_not_initialized(&self) -> bool {
+        self.kind.is_not_initialized()
+    }
+
+    /// Returns `true` if this is a replace-conflict error.
+    pub fn is_replace_conflict(&self) -> bool {
+        self.kind.is_replace_conflict()
+    }
+
+    /// Returns `true` if this is an SDK error.
+    pub fn is_sdk(&self) -> bool {
+        self.kind.is_sdk()
+    }
+
+    /// Returns `true` if this is an unhandled error.
+    pub fn is_unhandled(&self) -> bool {
+        self.kind.is_unhandled()
+    }
+
+    /// Returns `true` if this is an unknown-data-source error.
+    pub fn is_unknown_data_source(&self) -> bool {
+        self.kind.is_unknown_data_source()
+    }
 }
 
 impl fmt::Display for SzError {
@@ -714,6 +858,11 @@ pub trait SzErrorInspect {
     /// Returns `true` if the chain contains a general `SzError`.
     fn is_sz_general(&self) -> bool {
         self.sz_error().is_some_and(|e| e.is_general())
+    }
+
+    /// Returns `true` if the chain contains a database-related `SzError`.
+    fn is_sz_database(&self) -> bool {
+        self.sz_error().is_some_and(|e| e.is_database())
     }
 
     /// Returns `true` if the chain contains any `SzError`.
