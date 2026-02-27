@@ -615,7 +615,8 @@ fn clone_preserves_source() {
     let cause = std::io::Error::other("disk full");
     let err = SzError::new("db failed").with_code(1000).with_source(cause);
     let cloned = err.clone();
-    let source = std::error::Error::source(&cloned).expect("source should be preserved after clone");
+    let source =
+        std::error::Error::source(&cloned).expect("source should be preserved after clone");
     assert!(source.to_string().contains("disk full"));
 }
 
@@ -1788,7 +1789,10 @@ fn category_all_kinds() {
 
 #[test]
 fn category_on_sz_error() {
-    assert_eq!(SzError::database_transient("x").category(), "database_transient");
+    assert_eq!(
+        SzError::database_transient("x").category(),
+        "database_transient"
+    );
     assert_eq!(SzError::license("x").category(), "license");
     assert_eq!(SzError::not_found("x").category(), "not_found");
     assert_eq!(SzError::bad_input("x").category(), "bad_input");
@@ -2100,14 +2104,8 @@ fn hierarchy_first_element_is_self() {
     ];
     for kind in all_kinds {
         let h = kind.hierarchy();
-        assert!(
-            !h.is_empty(),
-            "{kind:?} hierarchy must not be empty"
-        );
-        assert_eq!(
-            h[0], kind,
-            "{kind:?} hierarchy first element must be self"
-        );
+        assert!(!h.is_empty(), "{kind:?} hierarchy must not be empty");
+        assert_eq!(h[0], kind, "{kind:?} hierarchy first element must be self");
     }
 }
 
@@ -2179,10 +2177,7 @@ fn hierarchy_last_element_matches_parent_predicate() {
             parent,
             "{leaf:?} hierarchy last element should be {parent:?}"
         );
-        assert!(
-            leaf.is(parent),
-            "{leaf:?}.is({parent:?}) should be true"
-        );
+        assert!(leaf.is(parent), "{leaf:?}.is({parent:?}) should be true");
     }
 }
 
@@ -2234,23 +2229,49 @@ fn hierarchy_is_zero_allocation() {
 fn hierarchy_delegates_for_all_families() {
     // One representative from each family.
     let cases: Vec<(SzError, &[SzErrorKind])> = vec![
-        (SzError::not_found("x"), &[SzErrorKind::NotFound, SzErrorKind::BadInput]),
-        (SzError::configuration("x"), &[SzErrorKind::Configuration, SzErrorKind::General]),
-        (SzError::database_transient("x"), &[SzErrorKind::DatabaseTransient, SzErrorKind::Retryable]),
-        (SzError::license("x"), &[SzErrorKind::License, SzErrorKind::Unrecoverable]),
+        (
+            SzError::not_found("x"),
+            &[SzErrorKind::NotFound, SzErrorKind::BadInput],
+        ),
+        (
+            SzError::configuration("x"),
+            &[SzErrorKind::Configuration, SzErrorKind::General],
+        ),
+        (
+            SzError::database_transient("x"),
+            &[SzErrorKind::DatabaseTransient, SzErrorKind::Retryable],
+        ),
+        (
+            SzError::license("x"),
+            &[SzErrorKind::License, SzErrorKind::Unrecoverable],
+        ),
         (SzError::new("x"), &[SzErrorKind::SzError]),
     ];
     for (err, expected) in cases {
-        assert_eq!(err.hierarchy(), expected, "hierarchy mismatch for {:?}", err.kind());
+        assert_eq!(
+            err.hierarchy(),
+            expected,
+            "hierarchy mismatch for {:?}",
+            err.kind()
+        );
     }
 }
 
 #[test]
 fn hierarchy_delegates_for_parent_kinds() {
-    assert_eq!(SzError::bad_input("x").hierarchy(), &[SzErrorKind::BadInput]);
+    assert_eq!(
+        SzError::bad_input("x").hierarchy(),
+        &[SzErrorKind::BadInput]
+    );
     assert_eq!(SzError::general("x").hierarchy(), &[SzErrorKind::General]);
-    assert_eq!(SzError::retryable("x").hierarchy(), &[SzErrorKind::Retryable]);
-    assert_eq!(SzError::unrecoverable("x").hierarchy(), &[SzErrorKind::Unrecoverable]);
+    assert_eq!(
+        SzError::retryable("x").hierarchy(),
+        &[SzErrorKind::Retryable]
+    );
+    assert_eq!(
+        SzError::unrecoverable("x").hierarchy(),
+        &[SzErrorKind::Unrecoverable]
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -2265,10 +2286,16 @@ fn kind_leaf_predicates_false_for_all_other_kinds() {
         (SzErrorKind::is_license, SzErrorKind::License),
         (SzErrorKind::is_not_found, SzErrorKind::NotFound),
         (SzErrorKind::is_not_initialized, SzErrorKind::NotInitialized),
-        (SzErrorKind::is_replace_conflict, SzErrorKind::ReplaceConflict),
+        (
+            SzErrorKind::is_replace_conflict,
+            SzErrorKind::ReplaceConflict,
+        ),
         (SzErrorKind::is_sdk, SzErrorKind::Sdk),
         (SzErrorKind::is_unhandled, SzErrorKind::Unhandled),
-        (SzErrorKind::is_unknown_data_source, SzErrorKind::UnknownDataSource),
+        (
+            SzErrorKind::is_unknown_data_source,
+            SzErrorKind::UnknownDataSource,
+        ),
     ];
     let all_kinds = [
         SzErrorKind::BadInput,
@@ -2505,8 +2532,7 @@ fn inspect_is_sz_database_send_sync() {
 
 #[test]
 fn inspect_is_sz_database_send_only() {
-    let err: Box<dyn std::error::Error + Send> =
-        Box::new(SzError::database("corruption"));
+    let err: Box<dyn std::error::Error + Send> = Box::new(SzError::database("corruption"));
     assert!(err.is_sz_database());
 }
 
@@ -2549,6 +2575,93 @@ fn hierarchy_parent_matches_family_predicate() {
 // SzError::find_in_chain
 // ---------------------------------------------------------------------------
 
+/// Returns a four-level error chain with an SzError at the innermost level.
+///
+/// Chain (outermost → innermost):
+///   WrapperError → WrapperError → WrapperError → SzError
+fn err_chain_with_sz_error() -> Result<String, Box<dyn std::error::Error>> {
+    // Level 1 (innermost): SzError
+    let sz = SzError::database_connection_lost("connection reset by peer")
+        .with_code(1006)
+        .with_component(SzComponent::Engine)
+        .with_details("host=db.example.com port=5432");
+
+    // Level 2: first WrapperError around SzError
+    let level2 = WrapperError(Box::new(sz));
+
+    // Level 3: second WrapperError
+    let level3 = WrapperError(Box::new(level2));
+
+    // Level 4 (outermost): third WrapperError
+    Err(Box::new(WrapperError(Box::new(level3))))
+}
+
+/// Returns a four-level error chain with no SzError at any level.
+///
+/// Chain (outermost → innermost):
+///   WrapperError → WrapperError → WrapperError → io::Error
+fn err_chain_with_error() -> Result<String, Box<dyn std::error::Error>> {
+    // Level 1 (innermost): a plain io::Error
+    let io_err = std::io::Error::new(std::io::ErrorKind::BrokenPipe, "pipe broken");
+
+    // Level 2: first WrapperError around io::Error
+    let level2 = WrapperError(Box::new(io_err));
+
+    // Level 3: second WrapperError
+    let level3 = WrapperError(Box::new(level2));
+
+    // Level 4 (outermost): third WrapperError
+    Err(Box::new(WrapperError(Box::new(level3))))
+}
+
+/// Parent that calls both children using `?`.  Both error types auto-convert
+/// into `Box<dyn Error>` so the caller gets a single unified return type.
+fn example_customer_function_with_err_chain() -> Result<String, Box<dyn std::error::Error>> {
+    let value = err_chain_with_sz_error()?;
+    let _ = err_chain_with_error()?;
+    Ok(value)
+}
+
+#[test]
+fn propagation_with_chain_with_multiple_err_match_arms_as_error_simplified() {
+    match example_customer_function_with_err_chain() {
+        Ok(response) => println!("{}", response),
+        Err(err) if err.is_sz_error() => println!("SzError: {err}"),
+        Err(err) => println!("Non-SzError error: {err}"),
+    }
+}
+
+#[test]
+fn err_chain_returns_sz_error() {
+    // example_customer_function_with_err_chain() calls err_chain_with_sz_error() first,
+    // which fails, so the propagated error contains the SzError from that call.
+    let err = example_customer_function_with_err_chain().unwrap_err();
+
+    // SzErrorInspect finds the SzError through the chain.
+    assert!(err.is_sz_error());
+    assert!(err.is_sz_retryable());
+    assert!(!err.is_sz_bad_input());
+    assert!(!err.is_sz_unrecoverable());
+
+    // Hierarchy-aware kind check.
+    assert!(err.is_sz(SzErrorKind::DatabaseConnectionLost));
+    assert!(err.is_sz(SzErrorKind::Retryable));
+    assert!(err.is_sz(SzErrorKind::SzError));
+    assert!(!err.is_sz(SzErrorKind::BadInput));
+
+    // Extract the SzError and verify all fields.
+    let sz = err.sz_error().expect("should find SzError in chain");
+    assert_eq!(sz.kind(), SzErrorKind::DatabaseConnectionLost);
+    assert_eq!(sz.code(), Some(1006));
+    assert_eq!(sz.component(), Some(SzComponent::Engine));
+    assert_eq!(sz.message(), "connection reset by peer");
+    assert_eq!(sz.details(), Some("host=db.example.com port=5432"));
+    assert_eq!(sz.severity(), "medium");
+    assert_eq!(sz.category(), "database_connection_lost");
+    assert!(sz.is_database());
+    assert!(sz.is_retryable());
+}
+
 #[test]
 fn find_in_chain_direct_hit() {
     let err = SzError::not_found("entity 42");
@@ -2579,6 +2692,77 @@ fn find_in_chain_deeply_nested() {
     let outer = WrapperError(Box::new(mid));
     let found = SzError::find_in_chain(&outer).unwrap();
     assert_eq!(found.kind(), SzErrorKind::License);
+}
+
+#[test]
+fn find_in_chain_four_levels() {
+    // Level 1 (innermost): SzError
+    let sz = SzError::database_connection_lost("connection reset by peer")
+        .with_code(1006)
+        .with_component(SzComponent::Engine)
+        .with_details("host=db.example.com port=5432");
+
+    // Level 2: first WrapperError around SzError
+    let level2 = WrapperError(Box::new(sz));
+
+    // Level 3: second WrapperError
+    let level3 = WrapperError(Box::new(level2));
+
+    // Level 4 (outermost): third WrapperError
+    let level4 = WrapperError(Box::new(level3));
+
+    // find_in_chain walks all four levels to find the SzError at the bottom.
+    let found = SzError::find_in_chain(&level4).unwrap();
+    assert_eq!(found.kind(), SzErrorKind::DatabaseConnectionLost);
+    assert_eq!(found.code(), Some(1006));
+    assert_eq!(found.component(), Some(SzComponent::Engine));
+    assert_eq!(found.message(), "connection reset by peer");
+    assert_eq!(found.details(), Some("host=db.example.com port=5432"));
+
+    // Verify the hierarchy predicates still work through the chain.
+    assert!(found.kind().is_database());
+    assert!(found.kind().is_retryable());
+
+    // Verify Display output includes all fields.
+    let display = format!("{level4}");
+    assert!(display.contains("connection reset by peer"));
+
+    // Walk the std::error::Error source chain manually to confirm 4 levels.
+    let src1 = (&level4 as &dyn std::error::Error)
+        .source()
+        .expect("level4 should have source");
+    let src2 = src1.source().expect("level3 should have source");
+    let src3 = src2.source().expect("level2 should have source");
+    assert!(
+        src3.source().is_none(),
+        "SzError (no source set) is the leaf"
+    );
+}
+
+#[test]
+fn find_in_chain_four_levels_no_sz_error() {
+    // Level 1 (innermost): a plain io::Error
+    let io_err = std::io::Error::new(std::io::ErrorKind::BrokenPipe, "pipe broken");
+
+    // Level 2: WrapperError around io::Error
+    let level2 = WrapperError(Box::new(io_err));
+
+    // Level 3: WrapperError around level 2
+    let level3 = WrapperError(Box::new(level2));
+
+    // Level 4 (outermost): WrapperError around level 3
+    let level4 = WrapperError(Box::new(level3));
+
+    // No SzError anywhere in the chain, so find_in_chain returns None.
+    assert!(SzError::find_in_chain(&level4).is_none());
+
+    // Walk the source chain manually to confirm all 4 levels exist.
+    let src1 = (&level4 as &dyn std::error::Error)
+        .source()
+        .expect("level4 should have source");
+    let src2 = src1.source().expect("level3 should have source");
+    let src3 = src2.source().expect("level2 should have source");
+    assert!(src3.source().is_none(), "io::Error is the leaf");
 }
 
 // ---------------------------------------------------------------------------
@@ -2635,7 +2819,9 @@ fn with_details_sets_details() {
 
 #[test]
 fn with_details_called_twice_overwrites() {
-    let err = SzError::new("msg").with_details("first").with_details("second");
+    let err = SzError::new("msg")
+        .with_details("first")
+        .with_details("second");
     assert_eq!(err.details(), Some("second"));
 }
 
@@ -2648,7 +2834,9 @@ fn clone_preserves_details() {
 
 #[test]
 fn display_includes_details() {
-    let err = SzError::bad_input("invalid").with_code(2).with_details("field=name");
+    let err = SzError::bad_input("invalid")
+        .with_code(2)
+        .with_details("field=name");
     let s = format!("{err}");
     assert!(s.contains("[field=name]"), "display was: {s}");
 }
