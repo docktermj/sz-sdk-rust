@@ -1,3 +1,10 @@
+//! Common parameter constants for the Senzing SDK.
+//!
+//! These constants provide named values for frequently used parameters
+//! such as empty strings, default configuration selectors, and logging
+//! toggles. Using these constants instead of raw literals improves
+//! readability and reduces the chance of errors.
+
 /// Use the default configuration during initialization.
 pub const SZ_INITIALIZE_WITH_DEFAULT_CONFIGURATION: i64 = 0;
 

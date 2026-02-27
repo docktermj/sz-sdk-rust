@@ -257,9 +257,9 @@
 //! assert!(log_line.contains("component=SzEngine"));
 //! ```
 
+pub(crate) mod errortypes;
 #[cfg(test)]
 mod tests;
-pub(crate) mod errortypes;
 
 use errortypes::{SzError as SzErrorType, SZ_ERROR_TYPES};
 use std::fmt;
@@ -273,10 +273,15 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum SzComponent {
+    /// The configuration component ([`SzConfig`](crate::SzConfig)).
     Config,
+    /// The configuration manager component ([`SzConfigManager`](crate::SzConfigManager)).
     ConfigManager,
+    /// The diagnostic component ([`SzDiagnostic`](crate::SzDiagnostic)).
     Diagnostic,
+    /// The entity resolution engine component ([`SzEngine`](crate::SzEngine)).
     Engine,
+    /// The product information component ([`SzProduct`](crate::SzProduct)).
     Product,
 }
 
@@ -332,23 +337,40 @@ impl fmt::Display for SzComponent {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum SzErrorKind {
+    /// The input provided to the API was invalid.
     BadInput,
+    /// A configuration error occurred.
     Configuration,
+    /// An unrecoverable database error occurred.
     Database,
+    /// The database connection was lost (retryable).
     DatabaseConnectionLost,
+    /// A transient database error occurred (retryable).
     DatabaseTransient,
+    /// A general error that does not fit other categories.
     General,
+    /// A license-related error occurred.
     License,
+    /// The requested entity or record was not found.
     NotFound,
+    /// The component has not been initialized.
     NotInitialized,
+    /// A replace-default-config conflict was detected.
     ReplaceConflict,
+    /// A transient error that may succeed on retry.
     Retryable,
+    /// The retry timeout was exceeded.
     RetryTimeoutExceeded,
+    /// An error originating from the SDK wrapper layer.
     Sdk,
+    /// Root of the error hierarchy (default kind).
     #[default] // Alphabetical position preserved; #[default] marks the hierarchy root.
     SzError,
+    /// An unhandled error occurred.
     Unhandled,
+    /// The specified data source is not recognized.
     UnknownDataSource,
+    /// An unrecoverable error occurred.
     Unrecoverable,
 }
 
@@ -1022,7 +1044,9 @@ impl SzError {
     /// let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "gone");
     /// assert!(SzError::find_in_chain(&io_err).is_none());
     /// ```
-    pub fn find_in_chain<'a>(mut err: &'a (dyn std::error::Error + 'static)) -> Option<&'a SzError> {
+    pub fn find_in_chain<'a>(
+        mut err: &'a (dyn std::error::Error + 'static),
+    ) -> Option<&'a SzError> {
         loop {
             if let Some(sz) = err.downcast_ref::<SzError>() {
                 return Some(sz);
@@ -1036,7 +1060,11 @@ impl fmt::Display for SzError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match (self.code, self.details.as_deref()) {
             (Some(code), Some(details)) => {
-                write!(f, "{} (code {}): {} [{}]", self.kind, code, self.message, details)
+                write!(
+                    f,
+                    "{} (code {}): {} [{}]",
+                    self.kind, code, self.message, details
+                )
             }
             (Some(code), None) => {
                 write!(f, "{} (code {}): {}", self.kind, code, self.message)

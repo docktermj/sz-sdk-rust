@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-sz-sdk-rust is the **trait-definition crate** (`sz-sdk`) for the Senzing SDK in Rust. It defines public interfaces (traits) for the Senzing entity resolution platform but contains no concrete implementations. Licensed under Apache 2.0.
+sz-sdk-rust is the **trait-definition crate** (`sz-sdk`) for the Senzing SDK in Rust.
+It defines public interfaces (traits) for the Senzing entity resolution platform but contains no concrete implementations.
+Licensed under Apache 2.0.
 
 Implementations are provided by separate crates:
 
@@ -13,7 +15,7 @@ Implementations are provided by separate crates:
 
 sz-sdk-rust also contains reusable components that are non-implementation specific and can be used by any of the implementations.
 
-The Go SDK at `/home/senzing/senzing-garage.git/sz-sdk-go/` is the canonical reference for interface design. The C headers at `/opt/senzing/er/sdk/c/` define the underlying native API.
+The C headers at `/opt/senzing/er/sdk/c/` on Linux platform define the underlying native API.
 
 ## Build Commands
 
@@ -25,6 +27,19 @@ cargo clippy             # Run linter
 cargo fmt                # Format code
 cargo doc --open         # Generate and view documentation
 ```
+
+## Quality Gates
+
+All of the following must pass before committing:
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo build
+```
+
+CI (`.github/workflows/ci.yml`) runs these same checks on every push and PR to `main`.
 
 ## Architecture
 
@@ -41,9 +56,13 @@ Supporting modules:
 
 - **`flags`** (`src/flags.rs`) — Bitmask constants controlling response content, matching C header `libSzEngineFlags.h` and `libSzEngineFlagGroups.h`
 - **`parameters`** (`src/parameters.rs`) — Common parameter constants (default config, logging, empty strings)
-- **`error`** (`src/error.rs`) — `SzError` enum with 16 error variants using `thiserror`
+- **`error`** (`src/error/`) — `SzError` with hierarchical `SzErrorKind` classification (16 error kinds), `SzComponent`, `SzErrorInspect` trait, and `SzResultExt` extension trait
 
-`error` is a canonical implementation that can be use by implementation classes.
+`error` is a canonical implementation that can be used by implementation classes.
+
+Standards:
+
+- Senzing uses a synchronous design — all traits are sync-only by deliberate choice
 
 ## Conventions
 
@@ -53,3 +72,15 @@ Supporting modules:
 - Methods returning JSON data from the engine return `Result<String, SzError>`
 - The `flags: i64` parameter on engine methods is a bitmask (see `src/flags.rs`)
 - Main branch is `main`
+
+## Crate-Level Lints
+
+`lib.rs` enforces:
+
+- `#![deny(unsafe_code)]` — no unsafe code allowed
+- `#![warn(missing_docs)]` — public items should have doc comments
+- `flags.rs` uses `#![allow(missing_docs)]` since flag constants are self-documenting by name
+
+## Supply Chain
+
+`deny.toml` configures `cargo-deny` for license and vulnerability auditing of dependencies.

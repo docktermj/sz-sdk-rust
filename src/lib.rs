@@ -7,6 +7,15 @@
 //! Implementations are provided by separate crates:
 //! - `sz-sdk-rust-core` — local C library FFI bindings
 //! - `sz-sdk-rust-grpc` — gRPC remote access
+//!
+//! # Design note
+//!
+//! All traits in this crate are **synchronous**. This is a deliberate choice
+//! that keeps the trait surface simple and compatible with both FFI and gRPC
+//! backends. Async wrappers can be added by implementation crates if needed.
+
+#![deny(unsafe_code)]
+#![warn(missing_docs)]
 
 mod config;
 mod config_manager;

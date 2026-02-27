@@ -1,3 +1,13 @@
+#![allow(missing_docs)]
+//! Bitmask flag constants controlling Senzing engine response content.
+//!
+//! These constants mirror the C header files `libSzEngineFlags.h` and
+//! `libSzEngineFlagGroups.h`. Individual flags can be combined with the
+//! bitwise OR operator (`|`) or by using the [`flags`] helper function.
+//!
+//! Pre-composed flag groups (e.g., [`SZ_ENTITY_DEFAULT_FLAGS`]) provide
+//! recommended defaults for common API calls.
+
 /// Combines multiple flag values into a single bitmask.
 pub fn flags(flags: &[i64]) -> i64 {
     flags.iter().fold(0, |acc, &f| acc | f)

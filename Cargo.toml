@@ -6,6 +6,10 @@ license = "Apache-2.0"
 description = "Rust trait definitions for the Senzing SDK"
 repository = "https://github.com/docktermj/sz-sdk-rust"
 authors = ["Michael Dockter <michael@dockter.com>"]
+readme = "README.md"
+documentation = "https://docs.rs/sz-sdk"
+keywords = ["senzing", "entity-resolution", "sdk", "traits"]
+categories = ["api-bindings", "data-structures"]
 
 [dependencies]
 phf = { version = "0.11", features = ["macros"] }

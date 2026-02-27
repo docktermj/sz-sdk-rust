@@ -1408,7 +1408,8 @@ fn inspect_send_sync_dyn_error() {
 #[test]
 fn sz_result_ok_is_result() {
     let r: SzResult<i32> = Ok(42);
-    assert_eq!(r.unwrap(), 42);
+    assert!(r.is_ok());
+    assert_eq!(r.ok(), Some(42));
 }
 
 #[test]
@@ -2281,7 +2282,8 @@ fn hierarchy_delegates_for_parent_kinds() {
 #[test]
 fn kind_leaf_predicates_false_for_all_other_kinds() {
     // Each predicate should return true for exactly one kind.
-    let predicate_kind_pairs: Vec<(fn(SzErrorKind) -> bool, SzErrorKind)> = vec![
+    type PredKindPair = (fn(SzErrorKind) -> bool, SzErrorKind);
+    let predicate_kind_pairs: Vec<PredKindPair> = vec![
         (SzErrorKind::is_configuration, SzErrorKind::Configuration),
         (SzErrorKind::is_license, SzErrorKind::License),
         (SzErrorKind::is_not_found, SzErrorKind::NotFound),
@@ -2785,7 +2787,7 @@ fn wrap_uses_display_as_message() {
 
 #[test]
 fn wrap_preserves_source() {
-    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "oops");
+    let io_err = std::io::Error::other("oops");
     let err = SzError::wrap(io_err);
     let src = std::error::Error::source(&err).expect("source should be set");
     assert!(src.downcast_ref::<std::io::Error>().is_some());
@@ -2793,8 +2795,7 @@ fn wrap_preserves_source() {
 
 #[test]
 fn wrap_works_with_map_err() {
-    let result: Result<(), std::io::Error> =
-        Err(std::io::Error::new(std::io::ErrorKind::Other, "boom"));
+    let result: Result<(), std::io::Error> = Err(std::io::Error::other("boom"));
     let sz_result: Result<(), SzError> = result.map_err(SzError::wrap);
     let err = sz_result.unwrap_err();
     assert_eq!(err.kind(), SzErrorKind::Sdk);
