@@ -747,6 +747,33 @@ impl SzError {
         Self::new(message).with_kind(SzErrorKind::Unrecoverable)
     }
 
+    /// Wraps a non-Senzing error as an [`SzErrorKind::Sdk`] error.
+    ///
+    /// The error's [`Display`](std::fmt::Display) text becomes the message,
+    /// and the original error is chained as the
+    /// [source](std::error::Error::source).  Use named constructors +
+    /// [`with_source()`](Self::with_source) when you need a specific kind or
+    /// custom message.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use sz_sdk::{SzError, SzErrorKind};
+    /// use std::error::Error;
+    /// use std::io;
+    ///
+    /// let io_err = io::Error::new(io::ErrorKind::BrokenPipe, "gone");
+    /// let err = SzError::wrap(io_err);
+    /// assert_eq!(err.kind(), SzErrorKind::Sdk);
+    /// assert!(err.source().is_some());
+    /// ```
+    pub fn wrap(source: impl std::error::Error + Send + Sync + 'static) -> Self {
+        let message = source.to_string();
+        Self::new(message)
+            .with_kind(SzErrorKind::Sdk)
+            .with_source(source)
+    }
+
     /// Sets the error code, returning `self`.
     ///
     /// If [`with_kind`](Self::with_kind) has **not** been called (and the

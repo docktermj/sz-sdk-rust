@@ -2547,3 +2547,39 @@ fn find_in_chain_deeply_nested() {
     let found = SzError::find_in_chain(&outer).unwrap();
     assert_eq!(found.kind(), SzErrorKind::License);
 }
+
+// ---------------------------------------------------------------------------
+// wrap: convenience method for non-Senzing errors
+// ---------------------------------------------------------------------------
+
+#[test]
+fn wrap_sets_kind_to_sdk() {
+    let io_err = std::io::Error::new(std::io::ErrorKind::BrokenPipe, "pipe broken");
+    let err = SzError::wrap(io_err);
+    assert_eq!(err.kind(), SzErrorKind::Sdk);
+}
+
+#[test]
+fn wrap_uses_display_as_message() {
+    let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file missing");
+    let err = SzError::wrap(io_err);
+    assert_eq!(err.message(), "file missing");
+}
+
+#[test]
+fn wrap_preserves_source() {
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "oops");
+    let err = SzError::wrap(io_err);
+    let src = std::error::Error::source(&err).expect("source should be set");
+    assert!(src.downcast_ref::<std::io::Error>().is_some());
+}
+
+#[test]
+fn wrap_works_with_map_err() {
+    let result: Result<(), std::io::Error> =
+        Err(std::io::Error::new(std::io::ErrorKind::Other, "boom"));
+    let sz_result: Result<(), SzError> = result.map_err(SzError::wrap);
+    let err = sz_result.unwrap_err();
+    assert_eq!(err.kind(), SzErrorKind::Sdk);
+    assert_eq!(err.message(), "boom");
+}
