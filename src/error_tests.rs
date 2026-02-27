@@ -763,6 +763,15 @@ fn kind_is_general_matches_children() {
 }
 
 #[test]
+fn kind_is_database_matches_children() {
+    assert!(SzErrorKind::Database.is(SzErrorKind::Database));
+    assert!(SzErrorKind::DatabaseConnectionLost.is(SzErrorKind::Database));
+    assert!(SzErrorKind::DatabaseTransient.is(SzErrorKind::Database));
+    assert!(!SzErrorKind::Retryable.is(SzErrorKind::Database));
+    assert!(!SzErrorKind::BadInput.is(SzErrorKind::Database));
+}
+
+#[test]
 fn kind_is_unrecoverable_matches_children() {
     assert!(SzErrorKind::Unrecoverable.is(SzErrorKind::Unrecoverable));
     assert!(SzErrorKind::Database.is(SzErrorKind::Unrecoverable));
@@ -1502,6 +1511,30 @@ fn is_bad_input_err_true() {
 fn is_bad_input_err_false_for_ok() {
     let r: SzResult<()> = Ok(());
     assert!(!r.is_bad_input_err());
+}
+
+#[test]
+fn is_general_err_true() {
+    let r: SzResult<()> = Err(SzError::configuration("bad config"));
+    assert!(r.is_general_err());
+}
+
+#[test]
+fn is_general_err_false_for_ok() {
+    let r: SzResult<()> = Ok(());
+    assert!(!r.is_general_err());
+}
+
+#[test]
+fn is_database_err_true() {
+    let r: SzResult<()> = Err(SzError::database_transient("deadlock"));
+    assert!(r.is_database_err());
+}
+
+#[test]
+fn is_database_err_false_for_ok() {
+    let r: SzResult<()> = Ok(());
+    assert!(!r.is_database_err());
 }
 
 // ---------------------------------------------------------------------------

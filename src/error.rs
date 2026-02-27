@@ -267,6 +267,7 @@ use std::sync::Arc;
 /// set this when constructing an [`SzError`] so callers can determine
 /// *which* component failed without parsing the error message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum SzComponent {
     Config,
     ConfigManager,
@@ -322,7 +323,7 @@ impl fmt::Display for SzComponent {
 /// ```
 ///
 /// Converting an `SzErrorKind` into an `SzError` produces an error with
-/// code `0` and an empty message — useful for quick construction in tests
+/// no code and an empty message — useful for quick construction in tests
 /// or when only the category matters (mirrors `std::io::Error: From<ErrorKind>`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[non_exhaustive]
@@ -340,7 +341,7 @@ pub enum SzErrorKind {
     Retryable,
     RetryTimeoutExceeded,
     Sdk,
-    #[default]
+    #[default] // Alphabetical position preserved; #[default] marks the hierarchy root.
     SzError,
     Unhandled,
     UnknownDataSource,
@@ -411,9 +412,9 @@ impl SzErrorKind {
     /// Hierarchy-aware kind check.
     ///
     /// Returns `true` if `self` matches `kind`, honoring the error-type
-    /// hierarchy.  For parent categories (`SzError`, `BadInput`, `General`,
-    /// `Retryable`, `Unrecoverable`) all child kinds also match.  For
-    /// leaf kinds the comparison is an exact equality check.
+    /// hierarchy.  For parent categories (`SzError`, `BadInput`, `Database`,
+    /// `General`, `Retryable`, `Unrecoverable`) all child kinds also match.
+    /// For leaf kinds the comparison is an exact equality check.
     ///
     /// # Examples
     /// ```
@@ -426,6 +427,7 @@ impl SzErrorKind {
     pub fn is(self, kind: SzErrorKind) -> bool {
         match kind {
             SzErrorKind::BadInput => self.is_bad_input(),
+            SzErrorKind::Database => self.is_database(),
             SzErrorKind::General => self.is_general(),
             SzErrorKind::Retryable => self.is_retryable(),
             SzErrorKind::Unrecoverable => self.is_unrecoverable(),
@@ -641,6 +643,14 @@ pub struct SzError {
     source: Option<Arc<dyn std::error::Error + Send + Sync>>,
 }
 
+// Compile-time assertion that SzError is Send + Sync.
+const _: () = {
+    fn _assert_send_sync<T: Send + Sync>() {}
+    fn _check() {
+        _assert_send_sync::<SzError>();
+    }
+};
+
 impl Clone for SzError {
     /// Clones the error, preserving the source chain via shared ownership.
     fn clone(&self) -> Self {
@@ -782,7 +792,7 @@ impl SzError {
     /// If [`with_kind`](Self::with_kind) has **not** been called (and the
     /// error was not created via `From<SzErrorKind>`), the kind is derived
     /// from the code using the `SZ_ERROR_TYPES` lookup table, defaulting
-    /// to [`SzErrorKind::General`] for unknown codes.
+    /// to [`SzErrorKind::SzError`] for unknown codes.
     ///
     /// If `with_kind` **has** been called, the explicitly set kind is
     /// preserved and the code is stored without changing the kind.
@@ -1240,6 +1250,12 @@ pub trait SzResultExt<T> {
 
     /// Returns `true` if the result is an error and that error is bad input.
     fn is_bad_input_err(&self) -> bool;
+
+    /// Returns `true` if the result is an error and that error is general.
+    fn is_general_err(&self) -> bool;
+
+    /// Returns `true` if the result is an error and that error is database-related.
+    fn is_database_err(&self) -> bool;
 }
 
 impl<T> SzResultExt<T> for SzResult<T> {
@@ -1272,5 +1288,13 @@ impl<T> SzResultExt<T> for SzResult<T> {
 
     fn is_bad_input_err(&self) -> bool {
         matches!(self, Err(e) if e.is_bad_input())
+    }
+
+    fn is_general_err(&self) -> bool {
+        matches!(self, Err(e) if e.is_general())
+    }
+
+    fn is_database_err(&self) -> bool {
+        matches!(self, Err(e) if e.is_database())
     }
 }
