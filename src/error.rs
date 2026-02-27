@@ -393,6 +393,7 @@ impl From<SzErrorType> for SzErrorKind {
 /// an [`SzErrorKind`] that classifies the error, an optional [`SzComponent`]
 /// identifying the originating subsystem, and an optional source error.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct SzError {
     code: Option<i64>,
     message: String,
