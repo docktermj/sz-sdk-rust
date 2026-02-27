@@ -1,4 +1,4 @@
-use super::error::{SzComponent, SzError, SzErrorInspect, SzErrorKind, SzResult, SzResultExt};
+use super::{SzComponent, SzError, SzErrorInspect, SzErrorKind, SzResult, SzResultExt};
 use std::fmt;
 
 // ---------------------------------------------------------------------------

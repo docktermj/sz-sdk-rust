@@ -257,7 +257,11 @@
 //! assert!(log_line.contains("component=SzEngine"));
 //! ```
 
-use crate::errortypes::{SzError as SzErrorType, SZ_ERROR_TYPES};
+#[cfg(test)]
+mod tests;
+pub(crate) mod errortypes;
+
+use errortypes::{SzError as SzErrorType, SZ_ERROR_TYPES};
 use std::fmt;
 use std::sync::Arc;
 

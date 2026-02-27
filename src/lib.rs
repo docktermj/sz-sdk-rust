@@ -13,9 +13,6 @@ mod config_manager;
 mod diagnostic;
 mod engine;
 mod error;
-#[cfg(test)]
-mod error_tests;
-pub(crate) mod errortypes;
 mod factory;
 pub mod flags;
 pub mod parameters;
