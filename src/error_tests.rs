@@ -2583,3 +2583,59 @@ fn wrap_works_with_map_err() {
     assert_eq!(err.kind(), SzErrorKind::Sdk);
     assert_eq!(err.message(), "boom");
 }
+
+// ---------------------------------------------------------------------------
+// details: supplementary context field
+// ---------------------------------------------------------------------------
+
+#[test]
+fn details_is_none_by_default() {
+    let err = SzError::new("x");
+    assert!(err.details().is_none());
+}
+
+#[test]
+fn with_details_sets_details() {
+    let err = SzError::new("msg").with_details("record_id=42");
+    assert_eq!(err.details(), Some("record_id=42"));
+}
+
+#[test]
+fn with_details_called_twice_overwrites() {
+    let err = SzError::new("msg").with_details("first").with_details("second");
+    assert_eq!(err.details(), Some("second"));
+}
+
+#[test]
+fn clone_preserves_details() {
+    let err = SzError::new("msg").with_details("extra");
+    let cloned = err.clone();
+    assert_eq!(cloned.details(), Some("extra"));
+}
+
+#[test]
+fn display_includes_details() {
+    let err = SzError::bad_input("invalid").with_code(2).with_details("field=name");
+    let s = format!("{err}");
+    assert!(s.contains("[field=name]"), "display was: {s}");
+}
+
+#[test]
+fn display_without_details_unchanged() {
+    let err = SzError::bad_input("invalid").with_code(2);
+    let s = format!("{err}");
+    assert_eq!(s, "bad input (code 2): invalid");
+}
+
+#[test]
+fn details_with_named_constructor() {
+    let err = SzError::bad_input("msg").with_details("extra");
+    assert_eq!(err.kind(), SzErrorKind::BadInput);
+    assert_eq!(err.details(), Some("extra"));
+}
+
+#[test]
+fn from_kind_has_no_details() {
+    let err = SzError::from(SzErrorKind::Sdk);
+    assert!(err.details().is_none());
+}

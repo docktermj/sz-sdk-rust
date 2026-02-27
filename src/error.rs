@@ -637,6 +637,7 @@ pub struct SzError {
     kind: SzErrorKind,
     kind_explicit: bool,
     component: Option<SzComponent>,
+    details: Option<String>,
     source: Option<Arc<dyn std::error::Error + Send + Sync>>,
 }
 
@@ -649,6 +650,7 @@ impl Clone for SzError {
             kind: self.kind,
             kind_explicit: self.kind_explicit,
             component: self.component,
+            details: self.details.clone(),
             source: self.source.clone(),
         }
     }
@@ -663,6 +665,7 @@ impl SzError {
             kind: SzErrorKind::default(),
             kind_explicit: false,
             component: None,
+            details: None,
             source: None,
         }
     }
@@ -801,6 +804,12 @@ impl SzError {
         self
     }
 
+    /// Sets supplementary details for this error and returns `self`.
+    pub fn with_details(mut self, details: impl Into<String>) -> Self {
+        self.details = Some(details.into());
+        self
+    }
+
     /// Sets the error kind and returns `self`.
     pub fn with_kind(mut self, kind: SzErrorKind) -> Self {
         self.kind = kind;
@@ -838,6 +847,11 @@ impl SzError {
     /// Returns the [`SzComponent`] that produced this error, if set.
     pub fn component(&self) -> Option<SzComponent> {
         self.component
+    }
+
+    /// Returns the supplementary details, if set.
+    pub fn details(&self) -> Option<&str> {
+        self.details.as_deref()
     }
 
     /// Returns the component name as a string, or `""` if no component is set.
@@ -1006,9 +1020,17 @@ impl SzError {
 
 impl fmt::Display for SzError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.code {
-            Some(code) => write!(f, "{} (code {}): {}", self.kind, code, self.message),
-            None => write!(f, "{}: {}", self.kind, self.message),
+        match (self.code, self.details.as_deref()) {
+            (Some(code), Some(details)) => {
+                write!(f, "{} (code {}): {} [{}]", self.kind, code, self.message, details)
+            }
+            (Some(code), None) => {
+                write!(f, "{} (code {}): {}", self.kind, code, self.message)
+            }
+            (None, Some(details)) => {
+                write!(f, "{}: {} [{}]", self.kind, self.message, details)
+            }
+            (None, None) => write!(f, "{}: {}", self.kind, self.message),
         }
     }
 }
@@ -1029,6 +1051,7 @@ impl From<SzErrorKind> for SzError {
             kind,
             kind_explicit: true,
             component: None,
+            details: None,
             source: None,
         }
     }
