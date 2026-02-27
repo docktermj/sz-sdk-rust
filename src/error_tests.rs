@@ -1630,3 +1630,47 @@ fn named_constructor_chains_with_builder() {
     assert_eq!(err.component(), Some(SzComponent::Engine));
     assert!(err.source().is_some());
 }
+
+// ---------------------------------------------------------------------------
+// Blanket SzErrorInspect impl: concrete types without dyn coercion
+// ---------------------------------------------------------------------------
+
+#[test]
+fn blanket_impl_sz_error_directly() {
+    let err = SzError::database_transient("deadlock");
+    assert!(err.is_sz_retryable());
+    assert!(err.sz_error().is_some());
+}
+
+#[test]
+fn blanket_impl_io_error() {
+    let err = std::io::Error::other("not senzing");
+    assert!(!err.is_sz_retryable());
+    assert!(err.sz_error().is_none());
+}
+
+#[test]
+fn blanket_impl_custom_wrapper() {
+    #[derive(Debug)]
+    enum AppError {
+        Senzing(SzError),
+    }
+    impl fmt::Display for AppError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                AppError::Senzing(e) => write!(f, "app: {e}"),
+            }
+        }
+    }
+    impl std::error::Error for AppError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            match self {
+                AppError::Senzing(e) => Some(e),
+            }
+        }
+    }
+
+    let app_err = AppError::Senzing(SzError::database_transient("deadlock"));
+    assert!(app_err.is_sz_retryable());
+    assert!(app_err.sz_error().is_some());
+}

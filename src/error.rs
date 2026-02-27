@@ -707,6 +707,12 @@ impl SzErrorInspect for dyn std::error::Error + Send + Sync + 'static {
     }
 }
 
+impl<E: std::error::Error + 'static> SzErrorInspect for E {
+    fn sz_error(&self) -> Option<&SzError> {
+        find_sz_error(self)
+    }
+}
+
 // ---------------------------------------------------------------------------
 // SzResult type alias
 // ---------------------------------------------------------------------------
