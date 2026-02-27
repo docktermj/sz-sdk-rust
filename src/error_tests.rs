@@ -2511,3 +2511,39 @@ fn hierarchy_parent_matches_family_predicate() {
     assert!(SzErrorKind::NotInitialized.hierarchy()[1].is_unrecoverable());
     assert!(SzErrorKind::Unhandled.hierarchy()[1].is_unrecoverable());
 }
+
+// ---------------------------------------------------------------------------
+// SzError::find_in_chain
+// ---------------------------------------------------------------------------
+
+#[test]
+fn find_in_chain_direct_hit() {
+    let err = SzError::not_found("entity 42");
+    let found = SzError::find_in_chain(&err).unwrap();
+    assert_eq!(found.kind(), SzErrorKind::NotFound);
+    assert_eq!(found.message(), "entity 42");
+}
+
+#[test]
+fn find_in_chain_walks_source_chain() {
+    let inner = SzError::database_transient("deadlock");
+    let wrapped: Box<dyn std::error::Error> = Box::new(WrapperError(Box::new(inner)));
+    let found = SzError::find_in_chain(&*wrapped).unwrap();
+    assert_eq!(found.kind(), SzErrorKind::DatabaseTransient);
+}
+
+#[test]
+fn find_in_chain_no_match() {
+    let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "gone");
+    assert!(SzError::find_in_chain(&io_err).is_none());
+}
+
+#[test]
+fn find_in_chain_deeply_nested() {
+    // SzError inside WrapperError inside another WrapperError
+    let sz = SzError::license("expired");
+    let mid = WrapperError(Box::new(sz));
+    let outer = WrapperError(Box::new(mid));
+    let found = SzError::find_in_chain(&outer).unwrap();
+    assert_eq!(found.kind(), SzErrorKind::License);
+}
