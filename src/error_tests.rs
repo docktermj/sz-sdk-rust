@@ -1674,3 +1674,90 @@ fn blanket_impl_custom_wrapper() {
     assert!(app_err.is_sz_retryable());
     assert!(app_err.sz_error().is_some());
 }
+
+// ---------------------------------------------------------------------------
+// is_database: cross-cutting predicate spanning retryable + unrecoverable
+// ---------------------------------------------------------------------------
+
+#[test]
+fn is_database_for_database() {
+    let err = SzError::database("schema error");
+    assert!(err.is_database());
+    assert!(err.is_unrecoverable());
+}
+
+#[test]
+fn is_database_for_database_connection_lost() {
+    let err = SzError::database_connection_lost("gone");
+    assert!(err.is_database());
+    assert!(err.is_retryable());
+}
+
+#[test]
+fn is_database_for_database_transient() {
+    let err = SzError::database_transient("deadlock");
+    assert!(err.is_database());
+    assert!(err.is_retryable());
+}
+
+#[test]
+fn is_database_false_for_non_database() {
+    assert!(!SzError::license("expired").is_database());
+    assert!(!SzError::not_found("missing").is_database());
+    assert!(!SzError::configuration("bad config").is_database());
+}
+
+#[test]
+fn kind_is_database() {
+    assert!(SzErrorKind::Database.is_database());
+    assert!(SzErrorKind::DatabaseConnectionLost.is_database());
+    assert!(SzErrorKind::DatabaseTransient.is_database());
+    assert!(!SzErrorKind::License.is_database());
+    assert!(!SzErrorKind::Retryable.is_database());
+}
+
+// ---------------------------------------------------------------------------
+// category: string slug for structured logging
+// ---------------------------------------------------------------------------
+
+#[test]
+fn category_all_kinds() {
+    assert_eq!(SzErrorKind::BadInput.category(), "bad_input");
+    assert_eq!(SzErrorKind::Configuration.category(), "configuration");
+    assert_eq!(SzErrorKind::Database.category(), "database");
+    assert_eq!(
+        SzErrorKind::DatabaseConnectionLost.category(),
+        "database_connection_lost"
+    );
+    assert_eq!(
+        SzErrorKind::DatabaseTransient.category(),
+        "database_transient"
+    );
+    assert_eq!(SzErrorKind::General.category(), "general");
+    assert_eq!(SzErrorKind::License.category(), "license");
+    assert_eq!(SzErrorKind::NotFound.category(), "not_found");
+    assert_eq!(SzErrorKind::NotInitialized.category(), "not_initialized");
+    assert_eq!(SzErrorKind::ReplaceConflict.category(), "replace_conflict");
+    assert_eq!(SzErrorKind::Retryable.category(), "retryable");
+    assert_eq!(
+        SzErrorKind::RetryTimeoutExceeded.category(),
+        "retry_timeout_exceeded"
+    );
+    assert_eq!(SzErrorKind::Sdk.category(), "sdk");
+    assert_eq!(SzErrorKind::SzError.category(), "sz_error");
+    assert_eq!(SzErrorKind::Unhandled.category(), "unhandled");
+    assert_eq!(
+        SzErrorKind::UnknownDataSource.category(),
+        "unknown_data_source"
+    );
+    assert_eq!(SzErrorKind::Unrecoverable.category(), "unrecoverable");
+}
+
+#[test]
+fn category_on_sz_error() {
+    assert_eq!(SzError::database_transient("x").category(), "database_transient");
+    assert_eq!(SzError::license("x").category(), "license");
+    assert_eq!(SzError::not_found("x").category(), "not_found");
+    assert_eq!(SzError::bad_input("x").category(), "bad_input");
+    assert_eq!(SzError::configuration("x").category(), "configuration");
+}

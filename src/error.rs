@@ -250,6 +250,16 @@ impl SzErrorKind {
         )
     }
 
+    /// Returns `true` if this is a database-related kind, regardless of retryability (Database, DatabaseConnectionLost, DatabaseTransient).
+    pub fn is_database(self) -> bool {
+        matches!(
+            self,
+            SzErrorKind::Database
+                | SzErrorKind::DatabaseConnectionLost
+                | SzErrorKind::DatabaseTransient
+        )
+    }
+
     /// Returns `true` for any `SzErrorKind` variant — i.e., any Senzing error.
     ///
     /// `SzError` is the root of the error hierarchy, so every variant
@@ -302,6 +312,31 @@ impl SzErrorKind {
             | SzErrorKind::DatabaseConnectionLost
             | SzErrorKind::DatabaseTransient => "medium",
             _ => "low",
+        }
+    }
+
+    /// Returns the error category as a static string slug.
+    ///
+    /// Useful for structured logging, metrics, and error reporting systems.
+    pub fn category(self) -> &'static str {
+        match self {
+            SzErrorKind::BadInput => "bad_input",
+            SzErrorKind::Configuration => "configuration",
+            SzErrorKind::Database => "database",
+            SzErrorKind::DatabaseConnectionLost => "database_connection_lost",
+            SzErrorKind::DatabaseTransient => "database_transient",
+            SzErrorKind::General => "general",
+            SzErrorKind::License => "license",
+            SzErrorKind::NotFound => "not_found",
+            SzErrorKind::NotInitialized => "not_initialized",
+            SzErrorKind::ReplaceConflict => "replace_conflict",
+            SzErrorKind::Retryable => "retryable",
+            SzErrorKind::RetryTimeoutExceeded => "retry_timeout_exceeded",
+            SzErrorKind::Sdk => "sdk",
+            SzErrorKind::SzError => "sz_error",
+            SzErrorKind::Unhandled => "unhandled",
+            SzErrorKind::UnknownDataSource => "unknown_data_source",
+            SzErrorKind::Unrecoverable => "unrecoverable",
         }
     }
 }
@@ -581,6 +616,11 @@ impl SzError {
         self.kind.is_unrecoverable()
     }
 
+    /// Returns `true` if this is a database-related error, regardless of retryability (Database, DatabaseConnectionLost, DatabaseTransient).
+    pub fn is_database(&self) -> bool {
+        self.kind.is_database()
+    }
+
     /// Returns `true` — every `SzError` is a Senzing error.
     pub fn is_sz_error(&self) -> bool {
         self.kind.is_sz_error()
@@ -591,6 +631,13 @@ impl SzError {
     /// See [`SzErrorKind::severity`] for the mapping.
     pub fn severity(&self) -> &'static str {
         self.kind.severity()
+    }
+
+    /// Returns the error category as a static string slug.
+    ///
+    /// See [`SzErrorKind::category`] for the mapping.
+    pub fn category(&self) -> &'static str {
+        self.kind.category()
     }
 }
 
