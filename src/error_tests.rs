@@ -97,9 +97,9 @@ fn from_code_unknown_data_source() {
 }
 
 #[test]
-fn from_code_unknown_code_defaults_to_general() {
+fn from_code_unknown_code_defaults_to_sz_error() {
     let err = SzError::new("unknown").with_code(999999);
-    assert_eq!(err.kind(), SzErrorKind::General);
+    assert_eq!(err.kind(), SzErrorKind::SzError);
     assert_eq!(err.code(), Some(999999));
 }
 
@@ -143,16 +143,16 @@ fn with_code_sets_code_and_kind() {
 }
 
 #[test]
-fn with_code_i64_overflow_defaults_to_general() {
+fn with_code_i64_overflow_defaults_to_sz_error() {
     let err = SzError::new("test").with_code(i64::MAX);
-    assert_eq!(err.kind(), SzErrorKind::General);
+    assert_eq!(err.kind(), SzErrorKind::SzError);
     assert_eq!(err.code(), Some(i64::MAX));
 }
 
 #[test]
-fn with_code_negative_defaults_to_general() {
+fn with_code_negative_defaults_to_sz_error() {
     let err = SzError::new("test").with_code(-1);
-    assert_eq!(err.kind(), SzErrorKind::General);
+    assert_eq!(err.kind(), SzErrorKind::SzError);
     assert_eq!(err.code(), Some(-1));
 }
 
@@ -164,10 +164,10 @@ fn with_code_zero_defaults_to_general() {
 }
 
 #[test]
-fn with_code_unknown_defaults_to_general() {
+fn with_code_unknown_defaults_to_sz_error() {
     let err = SzError::new("test").with_code(999999);
     assert_eq!(err.code(), Some(999999));
-    assert_eq!(err.kind(), SzErrorKind::General);
+    assert_eq!(err.kind(), SzErrorKind::SzError);
 }
 
 #[test]

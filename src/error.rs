@@ -792,7 +792,7 @@ impl SzError {
                 .get(&code)
                 .copied()
                 .map(SzErrorKind::from)
-                .unwrap_or(SzErrorKind::General);
+                .unwrap_or_default();
         }
         self.code = Some(code);
         self
